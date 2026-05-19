@@ -1,0 +1,49 @@
+# Java
+*.class
+*.jar
+*.war
+target/
+!.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 敏感信息
+.env
+*.env
+
+# 日志
+logs/
+*.log
+
+# Node
+node_modules/
+dist/
+
+# 前端打包产物（运行时生成）
+src/main/resources/static/
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# Docker
+mysql-data/
+
+# Roo Code
+.roo/
+
+# 交付包
+deliver/
+*.zip
