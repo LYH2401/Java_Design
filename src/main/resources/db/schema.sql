@@ -110,3 +110,34 @@ CREATE TABLE IF NOT EXISTS alert_log (
     INDEX idx_alert_type (alert_type),
     INDEX idx_create_time (create_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='告警日志';
+
+-- --------------------------------------------
+-- 8. 课表表（阶段 5-1 新增）
+-- --------------------------------------------
+CREATE TABLE IF NOT EXISTS course_schedule (
+    id          BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '课程ID',
+    student_id  VARCHAR(32)  NOT NULL COMMENT '学号',
+    course_name VARCHAR(128) NOT NULL COMMENT '课程名称',
+    teacher     VARCHAR(64)  DEFAULT NULL COMMENT '授课教师',
+    classroom   VARCHAR(64)  DEFAULT NULL COMMENT '上课教室',
+    day_of_week TINYINT      NOT NULL COMMENT '星期几（1-7）',
+    time_slot   VARCHAR(32)  NOT NULL COMMENT '节次（如 1-2, 3-4, 5-6）',
+    week_range  VARCHAR(32)  DEFAULT '1-18' COMMENT '周次范围（如 1-18）',
+    INDEX idx_student_id (student_id),
+    INDEX idx_day_of_week (day_of_week),
+    INDEX idx_classroom (classroom)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='课程表';
+
+-- --------------------------------------------
+-- 9. 校园地点表（阶段 5-1 新增）
+-- --------------------------------------------
+CREATE TABLE IF NOT EXISTS campus_location (
+    id           BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '地点ID',
+    name         VARCHAR(128) NOT NULL COMMENT '地点名称',
+    category     VARCHAR(64)  DEFAULT NULL COMMENT '分类（教学楼/食堂/宿舍/行政/体育/其他）',
+    description  TEXT         DEFAULT NULL COMMENT '地点描述',
+    coordinate_x DOUBLE       DEFAULT 0 COMMENT 'X坐标（米）',
+    coordinate_y DOUBLE       DEFAULT 0 COMMENT 'Y坐标（米）',
+    INDEX idx_category (category),
+    INDEX idx_name (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='校园地点信息';
