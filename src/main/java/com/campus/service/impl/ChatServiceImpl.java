@@ -6,8 +6,8 @@ import com.campus.entity.Message;
 import com.campus.repository.AlertLogMapper;
 import com.campus.repository.MessageMapper;
 import com.campus.service.ChatService;
+import com.campus.service.ConversationService;
 import com.campus.service.KnowledgeService;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
@@ -22,8 +22,8 @@ public class ChatServiceImpl implements ChatService {
 
     private static final Logger log = LoggerFactory.getLogger(ChatServiceImpl.class);
 
-    /** 历史消息最大条数 */
-    private static final int MAX_HISTORY = 20;
+    /** 默认加载最近 N 轮历史 */
+    private static final int DEFAULT_MAX_ROUNDS = 10;
     /** RAG 检索 topK */
     private static final int RAG_TOP_K = 5;
 
@@ -31,15 +31,18 @@ public class ChatServiceImpl implements ChatService {
     private final MessageMapper messageMapper;
     private final AlertLogMapper alertLogMapper;
     private final KnowledgeService knowledgeService;
+    private final ConversationService conversationService;
 
     public ChatServiceImpl(ChatClient chatClient,
                            MessageMapper messageMapper,
                            AlertLogMapper alertLogMapper,
-                           KnowledgeService knowledgeService) {
+                           KnowledgeService knowledgeService,
+                           ConversationService conversationService) {
         this.chatClient = chatClient;
         this.messageMapper = messageMapper;
         this.alertLogMapper = alertLogMapper;
         this.knowledgeService = knowledgeService;
+        this.conversationService = conversationService;
     }
 
     @Override
@@ -47,10 +50,13 @@ public class ChatServiceImpl implements ChatService {
         // 1. 保存用户消息
         saveMessage(conversationId, "USER", userMessage);
 
-        // 2. 加载历史消息作为上下文
-        String historyContext = buildHistoryContext(conversationId);
+        // 2. 若为会话首条消息，自动更新标题
+        tryAutoTitle(conversationId, userMessage);
 
-        // 3. 构建完整 Prompt
+        // 3. 加载最近 N 轮历史
+        String historyContext = buildHistoryContextByRounds(conversationId);
+
+        // 4. 构建完整 Prompt
         String prompt = buildPrompt(historyContext, userMessage);
 
         // 4. 调用 ChatClient 流式输出
@@ -78,8 +84,11 @@ public class ChatServiceImpl implements ChatService {
         // 1. 保存用户消息
         saveMessage(conversationId, "USER", userMessage);
 
-        // 2. 加载历史消息
-        String historyContext = buildHistoryContext(conversationId);
+        // 2. 若为会话首条消息，自动更新标题
+        tryAutoTitle(conversationId, userMessage);
+
+        // 3. 加载最近 N 轮历史
+        String historyContext = buildHistoryContextByRounds(conversationId);
 
         // 3. 构建 Prompt
         String prompt = buildPrompt(historyContext, userMessage);
@@ -117,13 +126,12 @@ public class ChatServiceImpl implements ChatService {
     /**
      * 构建历史消息上下文
      */
-    private String buildHistoryContext(Long conversationId) {
-        List<Message> history = messageMapper.selectList(
-                new LambdaQueryWrapper<Message>()
-                        .eq(Message::getConversationId, conversationId)
-                        .orderByAsc(Message::getCreateTime)
-                        .last("LIMIT " + MAX_HISTORY)
-        );
+    /**
+     * 按轮次加载历史消息上下文
+     * 使用 ConversationService.loadRecentRounds() 按「轮次」概念加载
+     */
+    private String buildHistoryContextByRounds(Long conversationId) {
+        List<Message> history = conversationService.loadRecentRounds(conversationId, DEFAULT_MAX_ROUNDS);
 
         if (history.isEmpty()) {
             return "";
@@ -193,6 +201,24 @@ public class ChatServiceImpl implements ChatService {
             log.error("RAG 知识检索异常", e);
             saveAlert("RAG_ERROR", "知识库检索失败: " + e.getMessage());
             return "";
+        }
+    }
+
+    /**
+     * 尝试自动更新会话标题（仅在会话仅有当前这条用户消息时更新）
+     */
+    private void tryAutoTitle(Long conversationId, String userMessage) {
+        try {
+            long count = messageMapper.selectCount(
+                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Message>()
+                            .eq(Message::getConversationId, conversationId)
+            );
+            // 仅首条消息（只有刚插入的这一条）时更新标题
+            if (count == 1) {
+                conversationService.updateTitle(conversationId, userMessage);
+            }
+        } catch (Exception e) {
+            log.warn("自动更新标题失败: conversationId={}", conversationId, e);
         }
     }
 
