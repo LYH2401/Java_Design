@@ -229,8 +229,9 @@ function renderMarkdown(text) {
 async function loadStats() {
   try {
     const res = await getEvalStats()
-    if (res.data?.code === 200 && res.data?.data) {
-      stats.value = res.data.data
+    // axios 拦截器已提取 res.data，res 即为 R 对象 {code, message, data}
+    if (res?.data) {
+      stats.value = res.data
     }
   } catch (e) {
     console.error('加载评估统计失败', e)
@@ -240,7 +241,8 @@ async function loadStats() {
 async function loadToolChart() {
   try {
     const res = await getAgentStats()
-    const data = res.data?.data
+    // axios 拦截器已提取 res.data，res 即为 R 对象 {code, message, data}
+    const data = res?.data
     if (!data?.tools || data.tools.length === 0) return
 
     const names = data.tools.map(t => t.toolName)
@@ -269,7 +271,8 @@ async function loadToolChart() {
 async function loadIntentChart() {
   try {
     const res = await getExecutionLogs(1, 200)
-    const data = res.data?.data
+    // axios 拦截器已提取 res.data，res 即为 R 对象 {code, message, data}
+    const data = res?.data
     if (!data?.records || data.records.length === 0) return
 
     // 按 agentIntent 分组统计
@@ -320,12 +323,13 @@ async function runCompare() {
   compareResult.value = null
   try {
     const res = await compareRagVsNonRag(q)
-    if (res.data?.code === 200 && res.data?.data) {
-      compareResult.value = res.data.data
+    // axios 拦截器已提取 res.data，res 即为 R 对象 {code, message, data}
+    if (res?.data) {
+      compareResult.value = res.data
       // 对比完成后刷新统计
       await loadStats()
     } else {
-      ElMessage.error(res.data?.message || '对比失败')
+      ElMessage.error(res?.message || '对比失败')
     }
   } catch (e) {
     ElMessage.error('对比请求失败: ' + (e.message || '未知错误'))

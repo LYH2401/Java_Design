@@ -78,7 +78,34 @@ CREATE TABLE IF NOT EXISTS agent_execution_log (
     INDEX idx_create_time (create_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Agent执行日志';
 
--- 6. RAG评估表
+-- 6. 课表表（阶段 5-1 新增）
+CREATE TABLE IF NOT EXISTS course_schedule (
+    id          BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '课程ID',
+    student_id  VARCHAR(32)  NOT NULL COMMENT '学号',
+    course_name VARCHAR(128) NOT NULL COMMENT '课程名称',
+    teacher     VARCHAR(64)  DEFAULT NULL COMMENT '授课教师',
+    classroom   VARCHAR(64)  DEFAULT NULL COMMENT '上课教室',
+    day_of_week TINYINT      NOT NULL COMMENT '星期几（1-7）',
+    time_slot   VARCHAR(32)  NOT NULL COMMENT '节次（如 1-2, 3-4, 5-6）',
+    week_range  VARCHAR(32)  DEFAULT '1-18' COMMENT '周次范围（如 1-18）',
+    INDEX idx_student_id (student_id),
+    INDEX idx_day_of_week (day_of_week),
+    INDEX idx_classroom (classroom)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='课程表';
+
+-- 7. 校园地点表（阶段 5-1 新增）
+CREATE TABLE IF NOT EXISTS campus_location (
+    id           BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '地点ID',
+    name         VARCHAR(128) NOT NULL COMMENT '地点名称',
+    category     VARCHAR(64)  DEFAULT NULL COMMENT '分类（教学楼/食堂/宿舍/行政/体育/其他）',
+    description  TEXT         DEFAULT NULL COMMENT '地点描述',
+    coordinate_x DOUBLE       DEFAULT 0 COMMENT 'X坐标（米）',
+    coordinate_y DOUBLE       DEFAULT 0 COMMENT 'Y坐标（米）',
+    INDEX idx_category (category),
+    INDEX idx_name (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='校园地点信息';
+
+-- 8. RAG评估表
 CREATE TABLE IF NOT EXISTS rag_evaluation (
     id              BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '评估ID',
     message_id      BIGINT       DEFAULT NULL COMMENT '消息ID',
@@ -138,3 +165,36 @@ INSERT IGNORE INTO knowledge_doc (id, title, category, content) VALUES
  || '● 学生食堂：共有三个食堂，分别位于东区（第一食堂）、西区（第二食堂）、北区（第三食堂）\n'
  || '● 体育馆：校园西北角，含篮球场、羽毛球场、游泳池\n'
  || '● 校医院：行政楼东侧，24 小时急诊电话：027-12345678');
+
+-- 课表示例数据（学号 2024001 的示例课表）
+INSERT IGNORE INTO course_schedule (id, student_id, course_name, teacher, classroom, day_of_week, time_slot, week_range) VALUES
+(1,  '2024001', '高等数学A(上)', '张明远', '教学楼B-301', 1, '1-2', '1-18'),
+(2,  '2024001', '大学英语(三)', '李清华', '教学楼A-205', 1, '3-4', '1-18'),
+(3,  '2024001', '大学物理B',   '王力学', '教学楼B-402', 2, '1-2', '1-18'),
+(4,  '2024001', '线性代数',     '赵数论', '教学楼B-210', 2, '5-6', '1-18'),
+(5,  '2024001', '程序设计基础', '陈代码', '实验楼C-101', 3, '1-2', '1-18'),
+(6,  '2024001', '体育(三)',     '刘运动', '体育馆',     3, '3-4', '1-18'),
+(7,  '2024001', '高等数学A(上)', '张明远', '教学楼B-301', 4, '1-2', '1-18'),
+(8,  '2024001', '大学英语(三)', '李清华', '教学楼A-205', 4, '5-6', '1-18'),
+(9,  '2024001', '大学物理实验',  '周实验', '实验楼B-305', 5, '1-4', '2-17'),
+(10, '2024001', '形势与政策',    '马思修', '教学楼A-101', 5, '7-8', '5-12'),
+(11, '2024002', '高等数学A(上)', '张明远', '教学楼B-302', 1, '3-4', '1-18'),
+(12, '2024002', '大学英语(一)', '刘外语', '教学楼A-208', 2, '1-2', '1-18');
+
+-- 校园地点数据（坐标以图书馆为原点(0,0)，东为+X，北为+Y）
+INSERT IGNORE INTO campus_location (id, name, category, description, coordinate_x, coordinate_y) VALUES
+(1,  '图书馆',        '图书馆', '校园中心标志性建筑，共五层，含自习区/社科图书/自然科学/电子阅览室/学术报告厅', 0,      0),
+(2,  '教学楼A区',     '教学楼', '位于校园东侧，主要为文科类课程教室，共6层',                                   120,    30),
+(3,  '教学楼B区',     '教学楼', '位于校园西侧，主要为理工科课程教室，共8层，含阶梯教室',                       -80,    50),
+(4,  '实验楼',        '实验室', '位于校园北侧，化学/物理/计算机实验课程教室',                                 20,     180),
+(5,  '行政楼',        '行政',   '校园南门入口处，校领导办公室/财务处/教务处所在地',                            0,     -150),
+(6,  '第一食堂',      '食堂',   '位于东区，共三层，一层为大众餐厅，二层为风味小吃，三层为教工餐厅',           100,    80),
+(7,  '第二食堂',      '食堂',   '位于西区，共两层，以地方特色美食为主',                                     -120,   70),
+(8,  '第三食堂',      '食堂',   '位于北区，靠近研究生宿舍，简约风格',                                       30,     140),
+(9,  '体育馆',        '体育',   '校园西北角，含篮球场/羽毛球场/游泳池/健身房',                             -100,   160),
+(10, '校医院',        '医疗',   '行政楼东侧，24小时急诊电话：027-12345678，门诊时间8:00-17:30',              60,    -100),
+(11, '学生宿舍1号楼', '宿舍',   '东区本科生宿舍，4人间，独立卫浴',                                          150,    100),
+(12, '学生宿舍3号楼', '宿舍',   '西区研究生宿舍，2人间',                                                 -150,    90),
+(13, '学术报告厅',    '学术',   '图书馆五楼，可容纳500人，举办大型讲座和学术会议',                            0,       5),
+(14, '快递驿站',      '生活',   '位于第一食堂南侧，支持中通/圆通/韵达/顺丰等快递收发',                      80,     50),
+(15, '校园超市',      '生活',   '位于第一食堂一楼，经营日用百货/文具/零食/饮品',                             90,     60);

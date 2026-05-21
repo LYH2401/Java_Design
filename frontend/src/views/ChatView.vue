@@ -191,16 +191,23 @@ onMounted(async () => {
 async function loadConversations() {
   try {
     const res = await getConversations()
-    conversations.value = res.data || []
+    // axios 拦截器已提取 res.data，res 即为 R 对象 {code, message, data}
+    conversations.value = res?.data || []
   } catch (e) {
     ElMessage.error('加载会话列表失败: ' + e.message)
+    conversations.value = []
   }
 }
 
 async function newConversation() {
   try {
     const res = await createConversation()
-    const conv = res.data
+    // axios 拦截器已提取 res.data，res 即为 R 对象 {code, message, data}
+    const conv = res?.data
+    if (!conv) {
+      ElMessage.error('创建会话失败：返回数据为空')
+      return
+    }
     conversations.value.unshift(conv)
     switchConversation(conv)
   } catch (e) {
@@ -209,11 +216,16 @@ async function newConversation() {
 }
 
 async function switchConversation(conv) {
+  if (!conv || !conv.id) {
+    console.warn('switchConversation: conv 无效', conv)
+    return
+  }
   currentConversationId.value = conv.id
   currentConversationTitle.value = conv.title || '新对话'
   try {
     const res = await getMessages(conv.id)
-    messages.value = (res.data || []).map(m => ({
+    // axios 拦截器已提取 res.data，res 即为 R 对象 {code, message, data}
+    messages.value = (res?.data || []).map(m => ({
       ...m,
       sources: m.metadata ? parseSources(m.metadata) : []
     }))

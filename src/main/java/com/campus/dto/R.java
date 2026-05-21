@@ -3,12 +3,15 @@ package com.campus.dto;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import java.time.LocalDateTime;
 
-@JsonInclude(JsonInclude.Include.NON_NULL)
 public class R<T> {
 
     private int code;
     private String message;
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private T data;
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private String timestamp;
 
     public R() {
