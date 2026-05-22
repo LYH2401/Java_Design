@@ -28,17 +28,20 @@ public class ChatServiceImpl implements ChatService {
     private static final int RAG_TOP_K = 5;
 
     private final ChatClient chatClient;
+    private final ChatClient deepseekChatClient;
     private final MessageMapper messageMapper;
     private final AlertLogMapper alertLogMapper;
     private final KnowledgeService knowledgeService;
     private final ConversationService conversationService;
 
     public ChatServiceImpl(ChatClient chatClient,
+                           @org.springframework.beans.factory.annotation.Qualifier("deepseekChatClient") ChatClient deepseekChatClient,
                            MessageMapper messageMapper,
                            AlertLogMapper alertLogMapper,
                            KnowledgeService knowledgeService,
                            ConversationService conversationService) {
         this.chatClient = chatClient;
+        this.deepseekChatClient = deepseekChatClient;
         this.messageMapper = messageMapper;
         this.alertLogMapper = alertLogMapper;
         this.knowledgeService = knowledgeService;
@@ -46,7 +49,7 @@ public class ChatServiceImpl implements ChatService {
     }
 
     @Override
-    public Flux<String> chatStream(Long conversationId, String userMessage) {
+    public Flux<String> chatStream(Long conversationId, String userMessage, String model) {
         // 1. 保存用户消息
         saveMessage(conversationId, "USER", userMessage);
 
@@ -59,10 +62,13 @@ public class ChatServiceImpl implements ChatService {
         // 4. 构建完整 Prompt
         String prompt = buildPrompt(historyContext, userMessage);
 
-        // 4. 调用 ChatClient 流式输出
+        // 5. 选择模型
+        ChatClient client = "deepseek".equalsIgnoreCase(model) ? deepseekChatClient : chatClient;
+
+        // 6. 调用 ChatClient 流式输出
         StringBuilder fullResponse = new StringBuilder();
 
-        return chatClient.prompt()
+        return client.prompt()
                 .user(prompt)
                 .stream()
                 .content()

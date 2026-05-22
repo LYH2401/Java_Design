@@ -1,6 +1,8 @@
 package com.campus.controller;
 
+import com.campus.dto.ChatRequest;
 import com.campus.dto.R;
+import com.campus.service.ConversationService;
 import com.campus.service.RagService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -27,25 +29,27 @@ public class RagController {
     private static final Logger log = LoggerFactory.getLogger(RagController.class);
 
     private final RagService ragService;
+    private final ConversationService conversationService;
 
-    public RagController(RagService ragService) {
+    public RagController(RagService ragService, ConversationService conversationService) {
         this.ragService = ragService;
+        this.conversationService = conversationService;
     }
 
     // ==================== 核心接口 ====================
 
     /**
      * RAG 流式问答（SSE）
-     * 前端通过 EventSource 接收逐 token 流式回复
+     * 从 JSON Body 接收 conversationId 和 message，支持对话历史上下文
      */
     @PostMapping(value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @Operation(summary = "RAG 流式问答",
-            description = "传入用户问题，经向量检索(3条)→置信度门控→增强Prompt→ChatClient流式输出。返回 SSE 流。")
-    public Flux<String> ragChat(
-            @Parameter(description = "用户问题文本", required = true)
-            @RequestParam String query) {
-        log.info("RAG 流式问答请求: query=\"{}\"", query.substring(0, Math.min(80, query.length())));
-        return ragService.answerWithContext(query);
+            description = "传入 conversationId 和 message，经向量检索→置信度门控→增强Prompt→ChatClient流式输出。返回 SSE 流。")
+    public Flux<String> ragChat(@RequestBody ChatRequest request) {
+        Long conversationId = getOrCreateConversationId(request);
+        log.info("RAG 流式问答请求: conversationId={}, message=\"{}\"",
+                conversationId, request.getMessage().substring(0, Math.min(80, request.getMessage().length())));
+        return ragService.answerWithContext(conversationId, request.getMessage());
     }
 
     /**
@@ -126,6 +130,13 @@ public class RagController {
     }
 
     // ==================== 私有辅助方法 ====================
+
+    private Long getOrCreateConversationId(ChatRequest request) {
+        if (request.getConversationId() != null && request.getConversationId() > 0) {
+            return request.getConversationId();
+        }
+        return conversationService.createConversation(1L, "RAG 对话").getId();
+    }
 
     /**
      * 从 Document metadata 中提取相似度用于展示

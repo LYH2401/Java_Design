@@ -1,16 +1,14 @@
 package com.campus.tool;
 
+import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.campus.entity.CampusLocation;
 import com.campus.repository.CampusLocationMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.ai.tool.annotation.Tool;
-import org.springframework.ai.tool.annotation.ToolParam;
-import org.springframework.stereotype.Component;
-
-import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * 校园导航工具
@@ -38,10 +36,7 @@ public class NavigationTool {
      * @param category 分类筛选（如"教学楼"、"食堂"、"宿舍"、"体育"），可选
      * @return JSON 格式的地点信息列表
      */
-    @Tool(name = "queryLocation", description = "查询校园地点信息。可以根据地点名称关键词或分类查询校园建筑、场所的位置和描述。用于回答「XX在哪里」「怎么去XX」等问题。")
-    public String queryLocation(
-            @ToolParam(description = "地点名称或关键词（可选），如：图书馆、食堂、教学楼。不传则返回全部地点") String name,
-            @ToolParam(description = "分类筛选（可选），如：教学楼、食堂、宿舍、行政、体育、医疗、生活") String category) {
+    public String queryLocation(String name, String category) {
 
         log.info("Tool调用 [queryLocation]: name={}, category={}", name, category);
         long startTime = System.currentTimeMillis();
@@ -103,10 +98,7 @@ public class NavigationTool {
      * @param to   终点名称
      * @return JSON 格式的导航信息（距离、方向、途经点）
      */
-    @Tool(name = "navigate", description = "校园路径导航。计算从起点到终点的步行/骑行路线，返回距离、方向和导航指引。用于回答「从图书馆到行政楼怎么走」等导航问题。")
-    public String navigate(
-            @ToolParam(description = "起点地点名称，如：图书馆、教学楼A区、第一食堂") String from,
-            @ToolParam(description = "终点地点名称，如：行政楼、体育馆、校医院") String to) {
+    public String navigate(String from, String to) {
 
         log.info("Tool调用 [navigate]: from={}, to={}", from, to);
         long startTime = System.currentTimeMillis();

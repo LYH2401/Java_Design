@@ -3,13 +3,14 @@ package com.campus.config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.embedding.EmbeddingModel;
+import org.springframework.ai.openai.OpenAiEmbeddingModel;
 import org.springframework.ai.vectorstore.SimpleVectorStore;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
  * 向量存储配置
- * 配置 SimpleVectorStore 和 EmbeddingModel Bean
+ * 使用 OpenAI 兼容 Embedding 接口（阿里云百炼 text-embedding-v3）
  */
 @Configuration
 public class VectorStoreConfig {
@@ -18,7 +19,7 @@ public class VectorStoreConfig {
 
     /**
      * 内存向量存储（SimpleVectorStore）
-     * 由 EmbeddingModel 自动注入（DashScope embedding 实现）
+     * 使用 OpenAI 兼容 EmbeddingModel（对接 DashScope compatible-mode）
      */
     @Bean
     public SimpleVectorStore simpleVectorStore(EmbeddingModel embeddingModel) {

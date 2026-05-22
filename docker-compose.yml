@@ -1,3 +1,5 @@
+name: campus-assistant
+
 services:
   campus-app:
     build: .

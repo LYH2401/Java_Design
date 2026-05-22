@@ -1,19 +1,23 @@
 package com.campus.tool;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.campus.entity.CourseSchedule;
-import com.campus.entity.CampusLocation;
-import com.campus.repository.CourseScheduleMapper;
-import com.campus.repository.CampusLocationMapper;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.ai.tool.annotation.Tool;
-import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
-import java.util.HashMap;
-import java.util.stream.Collectors;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.campus.entity.CampusLocation;
+import com.campus.entity.CourseSchedule;
+import com.campus.repository.CampusLocationMapper;
+import com.campus.repository.CourseScheduleMapper;
 
 /**
  * 课程与教室查询工具
@@ -55,10 +59,7 @@ public class CourseTool {
      * @param date      日期（可选），格式：星期X 或 星期几，如"星期一"、"周三"、"3"
      * @return JSON 格式的课程列表字符串
      */
-    @Tool(name = "queryCourse", description = "查询指定学生的课表。根据学号查询该学生选修的所有课程信息。可指定星期几来筛选某一天的课程。")
-    public String queryCourse(
-            @ToolParam(description = "学生学号，如 2024001") String studentId,
-            @ToolParam(description = "查询日期（可选），如：星期一、周三、3（数字1-7）。不传则返回全部课表") String date) {
+    public String queryCourse(String studentId, String date) {
 
         log.info("Tool调用 [queryCourse]: studentId={}, date={}", studentId, date);
         long startTime = System.currentTimeMillis();
@@ -107,10 +108,7 @@ public class CourseTool {
      * @param timeSlot 节次，如"1-2"、"3-4"、"5-6"、"7-8"
      * @return JSON 格式的空闲教室列表
      */
-    @Tool(name = "queryClassroom", description = "查询指定时间段的空闲教室。根据星期几和节次，找出当前没有被课程占用的教室。")
-    public String queryClassroom(
-            @ToolParam(description = "查询日期，如：星期一、周三、3（数字1-7）") String date,
-            @ToolParam(description = "节次，如：1-2、3-4、5-6、7-8") String timeSlot) {
+    public String queryClassroom(String date, String timeSlot) {
 
         log.info("Tool调用 [queryClassroom]: date={}, timeSlot={}", date, timeSlot);
         long startTime = System.currentTimeMillis();

@@ -34,17 +34,25 @@ public class ConversationServiceImpl implements ConversationService {
     }
 
     @Override
-    public Conversation createConversation(Long userId, String firstMessage) {
+    public Conversation createConversation(Long userId, String firstMessage, String mode) {
         String title = extractTitle(firstMessage);
 
         Conversation conv = new Conversation();
         conv.setUserId(userId);
         conv.setTitle(title);
         conv.setCreateTime(LocalDateTime.now());
+        // 使用 threadId 字段存储会话模式
+        boolean isIncognito = "INCOGNITO".equalsIgnoreCase(mode);
+        conv.setThreadId(isIncognito ? "INCOGNITO" : null);
         conversationMapper.insert(conv);
 
-        log.info("创建会话: id={}, userId={}, title={}", conv.getId(), userId, title);
+        log.info("创建会话: id={}, userId={}, title={}, mode={}", conv.getId(), userId, title, mode);
         return conv;
+    }
+
+    @Override
+    public Conversation createConversation(Long userId, String firstMessage) {
+        return createConversation(userId, firstMessage, "NORMAL");
     }
 
     @Override
@@ -105,28 +113,38 @@ public class ConversationServiceImpl implements ConversationService {
     public int cleanExpiredConversations(int retentionDays) {
         LocalDateTime cutoff = LocalDateTime.now().minusDays(retentionDays);
 
-        // 1. 查出过期会话 ID
+        int count = 0;
+
+        // 1. 清理过期会话
         List<Conversation> expired = conversationMapper.selectList(
                 new LambdaQueryWrapper<Conversation>()
                         .le(Conversation::getCreateTime, cutoff)
         );
 
-        if (expired.isEmpty()) {
-            log.info("无过期会话需要清理, 保留天数={}", retentionDays);
-            return 0;
-        }
-
-        int count = 0;
         for (Conversation conv : expired) {
-            // 删除关联消息
             messageMapper.delete(new LambdaQueryWrapper<Message>()
                     .eq(Message::getConversationId, conv.getId()));
-            // 删除会话
             conversationMapper.deleteById(conv.getId());
             count++;
+            log.debug("清理过期会话: id={}", conv.getId());
         }
 
-        log.info("过期会话清理完成: 清理{}个会话, 保留天数={}", count, retentionDays);
+        // 2. 清理所有无痕会话
+        List<Conversation> incognitoSessions = conversationMapper.selectList(
+                new LambdaQueryWrapper<Conversation>()
+                        .eq(Conversation::getThreadId, "INCOGNITO")
+        );
+
+        for (Conversation conv : incognitoSessions) {
+            messageMapper.delete(new LambdaQueryWrapper<Message>()
+                    .eq(Message::getConversationId, conv.getId()));
+            conversationMapper.deleteById(conv.getId());
+            count++;
+            log.debug("清理无痕会话: id={}", conv.getId());
+        }
+
+        log.info("会话清理完成: 共清理{}个会话 (过期: {}, 无痕: {}), 保留天数={}",
+                count, expired.size(), incognitoSessions.size(), retentionDays);
         return count;
     }
 

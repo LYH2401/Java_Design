@@ -55,7 +55,8 @@ public class ChatController {
     public Flux<ServerSentEvent<String>> chatStream(@RequestBody ChatRequest request) {
         Long conversationId = getOrCreateConversationId(request);
 
-        return chatService.chatStream(conversationId, request.getMessage())
+        String model = request.getModel() != null ? request.getModel() : "dashscope";
+        return chatService.chatStream(conversationId, request.getMessage(), model)
                 .map(chunk -> ServerSentEvent.<String>builder()
                         .data(chunk)
                         .build())
@@ -105,8 +106,10 @@ public class ChatController {
     @Operation(summary = "新建会话（自动从首条消息生成标题前20字）")
     public R<Conversation> createConversation(
             @Parameter(description = "首条消息（用于生成标题）")
-            @RequestParam(required = false, defaultValue = "新对话") String firstMessage) {
-        Conversation conv = conversationService.createConversation(DEFAULT_USER_ID, firstMessage);
+            @RequestParam(required = false, defaultValue = "新对话") String firstMessage,
+            @Parameter(description = "会话模式：NORMAL（保留记录）/ INCOGNITO（无痕）")
+            @RequestParam(required = false, defaultValue = "NORMAL") String mode) {
+        Conversation conv = conversationService.createConversation(DEFAULT_USER_ID, firstMessage, mode);
         return R.ok(conv);
     }
 

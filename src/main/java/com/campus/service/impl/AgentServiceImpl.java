@@ -5,6 +5,7 @@ import com.campus.entity.Message;
 import com.campus.repository.AgentExecutionLogMapper;
 import com.campus.repository.MessageMapper;
 import com.campus.service.AgentService;
+import com.campus.service.ConversationService;
 import com.campus.service.HitlService;
 import com.campus.service.RagService;
 import com.campus.tool.ToolExecutionTracker;
@@ -25,36 +26,51 @@ import java.util.stream.Collectors;
  * Agent 对话服务实现
  * 协调 ChatClient（注册了 @Tool 的 Bean）进行自动工具选择与调用
  * 集成 HitlService（人机协同确认）和 ToolExecutionTracker（工具调用追踪）
+ * 支持对话历史上下文和消息截断
  */
 @Service
 public class AgentServiceImpl implements AgentService {
 
     private static final Logger log = LoggerFactory.getLogger(AgentServiceImpl.class);
 
+    /** 历史轮次限制 */
+    private static final int MAX_HISTORY_ROUNDS = 5;
+    /** 单条消息最大字符数 */
+    private static final int MAX_MESSAGE_CHARS = 4000;
+
     private final ChatClient agentChatClient;
+    private final ChatClient deepseekAgentChatClient;
     private final MessageMapper messageMapper;
     private final AgentExecutionLogMapper executionLogMapper;
     private final RagService ragService;
     private final HitlService hitlService;
     private final ToolExecutionTracker toolTracker;
+    private final ConversationService conversationService;
 
     public AgentServiceImpl(
             @Qualifier("agentChatClient") ChatClient agentChatClient,
+            @Qualifier("deepseekAgentChatClient") ChatClient deepseekAgentChatClient,
             MessageMapper messageMapper,
             AgentExecutionLogMapper executionLogMapper,
             RagService ragService,
             HitlService hitlService,
-            ToolExecutionTracker toolTracker) {
+            ToolExecutionTracker toolTracker,
+            ConversationService conversationService) {
         this.agentChatClient = agentChatClient;
+        this.deepseekAgentChatClient = deepseekAgentChatClient;
         this.messageMapper = messageMapper;
         this.executionLogMapper = executionLogMapper;
         this.ragService = ragService;
         this.hitlService = hitlService;
         this.toolTracker = toolTracker;
+        this.conversationService = conversationService;
     }
 
     @Override
-    public Flux<String> agentChat(Long conversationId, String userMessage) {
+    public Flux<String> agentChat(Long conversationId, String userMessage, String model) {
+        // 根据模型选择对应的 ChatClient
+        ChatClient client = "deepseek".equalsIgnoreCase(model) ? deepseekAgentChatClient : agentChatClient;
+
         // 检查是否有待确认的操作需要处理
         String confirmResult = hitlService.tryResolveConfirmation(conversationId, userMessage);
         if (confirmResult != null) {
@@ -77,8 +93,9 @@ public class AgentServiceImpl implements AgentService {
             }
         }
 
-        // 1. 保存用户消息
-        saveMessage(conversationId, "USER", userMessage);
+        // 1. 保存用户消息（截断过长消息）
+        String truncated = truncateMessage(userMessage);
+        saveMessage(conversationId, "USER", truncated);
 
         // 2. 清除上轮工具追踪记录
         toolTracker.clear();
@@ -86,21 +103,27 @@ public class AgentServiceImpl implements AgentService {
         long startTime = System.currentTimeMillis();
         StringBuilder fullResponse = new StringBuilder();
 
-        // 3. 调用带 Tool 能力的 ChatClient（流式），工具自动选择与调用
-        return agentChatClient.prompt()
-                .user(userMessage)
+        // 3. 加载对话历史上下文
+        String historyContext = buildHistoryContext(conversationId);
+
+        // 4. 构建带历史的 Prompt
+        String prompt = buildAgentPrompt(historyContext, truncated);
+
+        // 5. 调用带 Tool 能力的 ChatClient（流式），工具自动选择与调用
+        return client.prompt()
+                .user(prompt)
                 .stream()
                 .content()
                 .doOnNext(fullResponse::append)
                 .doOnComplete(() -> {
                     String response = fullResponse.toString();
-                    // 4. 保存 AI 回复
+                    // 6. 保存 AI 回复
                     saveMessage(conversationId, "ASSISTANT", response);
-                    // 5. 记录 Agent 执行日志（包含工具调用信息）
+                    // 7. 记录 Agent 执行日志（包含工具调用信息）
                     int elapsed = (int) (System.currentTimeMillis() - startTime);
                     saveExecutionLog(conversationId, userMessage, response, elapsed);
 
-                    // 6. 检测是否需要用户确认（Hitl）
+                    // 8. 检测是否需要用户确认（Hitl）
                     if (hitlService.requiresConfirmation(response)) {
                         String actionDesc = hitlService.extractActionDescription(response);
                         if (actionDesc != null) {
@@ -108,10 +131,10 @@ public class AgentServiceImpl implements AgentService {
                             log.info("检测到需要确认的操作: conversationId={}, action={}", conversationId, actionDesc);
                         }
                     }
-                    // 7. 清除本轮工具追踪
+                    // 9. 清除本轮工具追踪
                     toolTracker.clear();
-                    log.info("Agent 对话完成: conversationId={}, 耗时={}ms, 工具调用次数={}",
-                            conversationId, elapsed, toolTracker.getCallCount());
+                    log.info("Agent 对话完成: conversationId={}, model={}, 耗时={}ms, 工具调用次数={}",
+                            conversationId, model, elapsed, toolTracker.getCallCount());
                 })
                 .doOnError(e -> {
                     log.error("Agent 调用异常: conversationId={}", conversationId, e);
@@ -123,7 +146,10 @@ public class AgentServiceImpl implements AgentService {
      * Agent 对话 + RAG 知识增强
      * 先检索知识库，将检索到的文档作为上下文注入 Prompt，再由 Agent 决定是否调用工具
      */
-    public Flux<String> agentChatWithRag(Long conversationId, String userMessage) {
+    public Flux<String> agentChatWithRag(Long conversationId, String userMessage, String model) {
+        // 根据模型选择对应的 ChatClient
+        ChatClient client = "deepseek".equalsIgnoreCase(model) ? deepseekAgentChatClient : agentChatClient;
+
         // 检查是否有待确认的操作需要处理
         String confirmResult = hitlService.tryResolveConfirmation(conversationId, userMessage);
         if (confirmResult != null) {
@@ -146,8 +172,9 @@ public class AgentServiceImpl implements AgentService {
             }
         }
 
-        // 1. 保存用户消息
-        saveMessage(conversationId, "USER", userMessage);
+        // 1. 保存用户消息（截断）
+        String truncated = truncateMessage(userMessage);
+        saveMessage(conversationId, "USER", truncated);
 
         // 2. 清除上轮工具追踪记录
         toolTracker.clear();
@@ -155,15 +182,18 @@ public class AgentServiceImpl implements AgentService {
         long startTime = System.currentTimeMillis();
         StringBuilder fullResponse = new StringBuilder();
 
-        // 3. RAG 检索相关文档
-        List<org.springframework.ai.document.Document> ragDocs = ragService.search(userMessage, 3);
+        // 3. 加载对话历史上下文
+        String historyContext = buildHistoryContext(conversationId);
+
+        // 4. RAG 检索相关文档
+        List<org.springframework.ai.document.Document> ragDocs = ragService.search(truncated, 3);
         String ragContext = buildRagContext(ragDocs);
 
-        // 4. 拼接增强 Prompt
-        String enhancedPrompt = buildRagEnhancedPrompt(ragContext, userMessage);
+        // 5. 拼接增强 Prompt（RAG + 历史 + 用户消息）
+        String enhancedPrompt = buildRagEnhancedPrompt(ragContext, historyContext, truncated);
 
-        // 5. 调用 Agent ChatClient（带 Tool + RAG 上下文）
-        return agentChatClient.prompt()
+        // 6. 调用 Agent ChatClient（带 Tool + RAG 上下文）
+        return client.prompt()
                 .user(enhancedPrompt)
                 .stream()
                 .content()
@@ -174,7 +204,6 @@ public class AgentServiceImpl implements AgentService {
                     int elapsed = (int) (System.currentTimeMillis() - startTime);
                     saveExecutionLog(conversationId, "[RAG+Agent] " + userMessage, response, elapsed);
 
-                    // 检测是否需要用户确认
                     if (hitlService.requiresConfirmation(response)) {
                         String actionDesc = hitlService.extractActionDescription(response);
                         if (actionDesc != null) {
@@ -183,8 +212,8 @@ public class AgentServiceImpl implements AgentService {
                         }
                     }
                     toolTracker.clear();
-                    log.info("RAG+Agent 对话完成: conversationId={}, 耗时={}ms, 检索文档数={}, 工具调用次数={}",
-                            conversationId, elapsed, ragDocs.size(), toolTracker.getCallCount());
+                    log.info("RAG+Agent 对话完成: conversationId={}, model={}, 耗时={}ms, 检索文档数={}, 工具调用次数={}",
+                            conversationId, model, elapsed, ragDocs.size(), toolTracker.getCallCount());
                 })
                 .doOnError(e -> {
                     log.error("RAG+Agent 调用异常: conversationId={}", conversationId, e);
@@ -303,19 +332,75 @@ public class AgentServiceImpl implements AgentService {
         return sb.toString();
     }
 
-    private String buildRagEnhancedPrompt(String ragContext, String userMessage) {
-        if (ragContext == null || ragContext.isEmpty()) {
+    /**
+     * 截断过长的消息，防止超出模型上下文窗口
+     */
+    private String truncateMessage(String content) {
+        if (content == null) return "";
+        if (content.length() <= MAX_MESSAGE_CHARS) return content;
+        return content.substring(0, MAX_MESSAGE_CHARS) + "...[消息过长已截断]";
+    }
+
+    /**
+     * 构建对话历史上下文
+     * 使用 ConversationService.loadRecentRounds() 加载最近 N 轮对话
+     */
+    private String buildHistoryContext(Long conversationId) {
+        List<Message> history = conversationService.loadRecentRounds(conversationId, MAX_HISTORY_ROUNDS);
+
+        if (history == null || history.isEmpty()) {
+            return "";
+        }
+
+        StringBuilder sb = new StringBuilder("【对话历史】\n");
+        for (Message msg : history) {
+            String prefix = "USER".equals(msg.getRole()) ? "用户" : "助手";
+            sb.append(prefix).append("：").append(msg.getContent()).append("\n");
+        }
+        return sb.toString();
+    }
+
+    /**
+     * 构建 Agent 对话 Prompt（带历史）
+     */
+    private String buildAgentPrompt(String historyContext, String userMessage) {
+        if (historyContext == null || historyContext.isEmpty()) {
             return userMessage;
         }
-        return """
-                ## 参考资料
-                %s
-                
-                ## 用户问题
-                %s
-                
-                请根据上述参考资料回答问题。如果参考资料中包含相关信息，请优先使用；否则使用你自己的知识。
-                如果需要调用工具获取更具体的信息（如课表、导航、办事流程），请选择合适的工具。
-                """.formatted(ragContext, userMessage);
+        return historyContext + "\n【当前问题】\n" + userMessage
+                + "\n请结合对话历史回答当前问题。";
+    }
+
+    /**
+     * 构建 RAG 增强 Prompt（带历史上下文）
+     * 优先级：RAG 参考资料 > 对话历史 > 用户消息
+     */
+    private String buildRagEnhancedPrompt(String ragContext, String historyContext, String userMessage) {
+        StringBuilder sb = new StringBuilder();
+
+        // 1. RAG 参考资料
+        if (ragContext != null && !ragContext.isEmpty()) {
+            sb.append("## 参考资料\n");
+            sb.append(ragContext);
+            sb.append("\n\n");
+        }
+
+        // 2. 对话历史
+        if (historyContext != null && !historyContext.isEmpty()) {
+            sb.append(historyContext);
+            sb.append("\n");
+        }
+
+        // 3. 用户问题
+        sb.append("## 用户问题\n");
+        sb.append(userMessage);
+        sb.append("\n\n");
+
+        if (ragContext != null && !ragContext.isEmpty()) {
+            sb.append("请根据上述参考资料回答问题。如果参考资料中包含相关信息，请优先使用；否则使用你自己的知识。");
+        }
+        sb.append("\n如果需要调用工具获取更具体的信息（如课表、导航、办事流程），请选择合适的工具。");
+
+        return sb.toString();
     }
 }

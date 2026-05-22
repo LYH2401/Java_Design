@@ -20,14 +20,27 @@ spring:
       schema-locations: classpath:db/schema.sql
       data-locations: classpath:db/data.sql
 
-  # DashScope AI
+  # Spring AI OpenAI 配置（默认：阿里云百炼兼容模式）
   ai:
-    dashscope:
+    openai:
       api-key: ${AI_DASHSCOPE_API_KEY}
+      base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
       chat:
         options:
           model: qwen-turbo
           temperature: 0.7
+      embedding:
+        options:
+          model: text-embedding-v3
+
+# DeepSeek 模型配置（独立 ChatClient）
+deepseek:
+  api-key: ${DEEPSEEK_API}
+  base-url: https://api.deepseek.com
+  chat:
+    options:
+      model: deepseek-v4-flash
+      temperature: 0.7
 
 # MyBatis-Plus
 mybatis-plus:

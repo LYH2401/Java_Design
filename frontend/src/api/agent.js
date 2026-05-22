@@ -1,11 +1,11 @@
 import api from './index'
 
-export const agentChat = (conversationId, message, withRag = false) => {
+export const agentChat = (conversationId, message, withRag = false, model = 'dashscope') => {
   const url = withRag ? '/agent/chat/with-rag' : '/agent/chat'
   return fetch(`/api${url}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ conversationId, message })
+    body: JSON.stringify({ conversationId, message, model })
   })
 }
 

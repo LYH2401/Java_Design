@@ -1,15 +1,14 @@
 package com.campus.tool;
 
+import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.campus.entity.KnowledgeDoc;
 import com.campus.repository.KnowledgeDocMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.ai.tool.annotation.Tool;
-import org.springframework.ai.tool.annotation.ToolParam;
-import org.springframework.stereotype.Component;
-
-import java.util.List;
 
 /**
  * 校园服务工具
@@ -36,9 +35,7 @@ public class ServiceTool {
      * @param keyword 流程关键词，如"选课"、"校园卡补办"、"奖学金申请"、"请假"
      * @return JSON 格式的流程说明
      */
-    @Tool(name = "queryProcedure", description = "查询校园办事流程。根据关键词搜索办事流程说明文档，如选课流程、校园卡补办流程、奖学金申请流程、请假流程等。")
-    public String queryProcedure(
-            @ToolParam(description = "办事流程关键词，如：选课、补办校园卡、奖学金、请假、图书馆借阅") String keyword) {
+    public String queryProcedure(String keyword) {
 
         log.info("Tool调用 [queryProcedure]: keyword={}", keyword);
         long startTime = System.currentTimeMillis();
@@ -104,9 +101,7 @@ public class ServiceTool {
      * @param action 操作类型：balance(余额)、recharge(充值方式)、lost(挂失)、replace(补办)、info(综合信息)
      * @return JSON 格式的校园卡信息
      */
-    @Tool(name = "queryCampusCard", description = "查询校园卡相关信息。包括校园卡余额查询、充值方式说明、挂失流程、补办流程、综合信息等。用于回答关于校园一卡通的各种问题。")
-    public String queryCampusCard(
-            @ToolParam(description = "查询类型：balance(余额查询)、recharge(充值方式)、lost(挂失流程)、replace(补办流程)、info(综合信息)。默认为 info") String action) {
+    public String queryCampusCard(String action) {
 
         log.info("Tool调用 [queryCampusCard]: action={}", action);
         long startTime = System.currentTimeMillis();

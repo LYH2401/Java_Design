@@ -1,22 +1,20 @@
 package com.campus.config;
 
-import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.campus.tool.CourseTool;
 import com.campus.tool.NavigationTool;
 import com.campus.tool.ServiceTool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.model.function.FunctionCallback;
+import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
  * Agent 核心配置
- * 将 @Tool 标注的组件注册到 ChatClient，使其具备 Function Calling 能力
- * <p>
- * 注意：Spring AI Alibaba 1.1.2 中通过 ChatClient.Builder.defaultTools()
- * 直接注册工具对象，无需 ToolRegistry（该 API 在更高版本才引入）
- * </p>
+ * 使用 Spring AI 1.0.0-M5 的 FunctionCallback API 注册工具，
+ * 使 ChatClient 具备 Function Calling 能力。
  */
 @Configuration
 public class AgentConfig {
@@ -25,7 +23,7 @@ public class AgentConfig {
 
     /**
      * Agent 系统 Prompt
-     * 清晰描述每个 Tool 的适用场景，指导模型正确选择工具
+     * 清晰描述每个 Function 的适用场景，指导模型正确选择工具
      */
     public static final String AGENT_SYSTEM_PROMPT = """
             你是"校园智能服务小助手"，一所现代化大学的AI助手。
@@ -63,23 +61,78 @@ public class AgentConfig {
             """;
 
     /**
-     * Agent 专用 ChatClient Bean
-     * 通过 ChatClient.Builder.defaultTools() 直接注册带有 @Tool 注解的 Bean，
-     * 使 DashScope 模型具备 Function Calling 能力。
-     * <p>
-     * 独立创建 Builder 以避免与 AiConfig 中的基础 ChatClient Builder 互相干扰。
-     * </p>
+     * Agent 专用 ChatClient Bean（DashScope/百炼）
      */
     @Bean
-    public ChatClient agentChatClient(DashScopeChatModel chatModel,
+    public ChatClient agentChatClient(OpenAiChatModel chatModel,
                                        CourseTool courseTool,
                                        NavigationTool navigationTool,
                                        ServiceTool serviceTool) {
         ChatClient agentClient = ChatClient.builder(chatModel)
                 .defaultSystem(AGENT_SYSTEM_PROMPT)
-                .defaultTools(courseTool, navigationTool, serviceTool)
+                .defaultFunctions(buildFunctionCallbacks(courseTool, navigationTool, serviceTool))
                 .build();
-        log.info("Agent ChatClient 初始化完成: 已注册 CourseTool, NavigationTool, ServiceTool");
+        log.info("Agent ChatClient (DashScope) 初始化完成");
         return agentClient;
+    }
+
+    /**
+     * Agent 专用 ChatClient Bean（DeepSeek）
+     */
+    @Bean
+    public ChatClient deepseekAgentChatClient(
+            @org.springframework.beans.factory.annotation.Qualifier("deepseekChatModel") OpenAiChatModel deepseekChatModel,
+            CourseTool courseTool,
+            NavigationTool navigationTool,
+            ServiceTool serviceTool) {
+        ChatClient agentClient = ChatClient.builder(deepseekChatModel)
+                .defaultSystem(AGENT_SYSTEM_PROMPT)
+                .defaultFunctions(buildFunctionCallbacks(courseTool, navigationTool, serviceTool))
+                .build();
+        log.info("Agent ChatClient (DeepSeek) 初始化完成");
+        return agentClient;
+    }
+
+    private FunctionCallback[] buildFunctionCallbacks(CourseTool courseTool,
+                                                       NavigationTool navigationTool,
+                                                       ServiceTool serviceTool) {
+        return new FunctionCallback[] {
+            FunctionCallback.builder()
+                .method("queryCourse", String.class, String.class)
+                .name("queryCourse")
+                .description("查询指定学生的课表。根据学号查询该学生选修的所有课程信息。可指定星期几来筛选某一天的课程。")
+                .targetObject(courseTool)
+                .build(),
+            FunctionCallback.builder()
+                .method("queryClassroom", String.class, String.class)
+                .name("queryClassroom")
+                .description("查询指定时间段的空闲教室。根据星期几和节次，找出当前没有被课程占用的教室。")
+                .targetObject(courseTool)
+                .build(),
+            FunctionCallback.builder()
+                .method("queryLocation", String.class, String.class)
+                .name("queryLocation")
+                .description("查询校园地点信息。可以根据地点名称关键词或分类查询校园建筑、场所的位置和描述。")
+                .targetObject(navigationTool)
+                .build(),
+            FunctionCallback.builder()
+                .method("navigate", String.class, String.class)
+                .name("navigate")
+                .description("校园路径导航。计算从起点到终点的步行/骑行路线，返回距离、方向和导航指引。")
+                .targetObject(navigationTool)
+                .build(),
+            FunctionCallback.builder()
+                .method("queryProcedure", String.class)
+                .name("queryProcedure")
+                .description("查询校园办事流程。根据关键词搜索办事流程说明文档。")
+                .targetObject(serviceTool)
+                .build(),
+            FunctionCallback.builder()
+                .method("queryCampusCard", String.class)
+                .name("queryCampusCard")
+                .description("查询校园卡相关信息。包括余额查询、充值方式、挂失流程、补办流程等。")
+                .targetObject(serviceTool)
+                .build()
+        };
     }
 }

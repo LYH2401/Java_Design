@@ -1,21 +1,15 @@
 <template>
-  <div class="chat-view">
+  <div class="solver-view">
     <!-- 左侧会话列表 -->
     <aside class="sidebar" :class="{ collapsed: sidebarCollapsed }">
       <div class="sidebar-header">
-        <h3>校园智能服务小助手</h3>
-        <el-button
-          type="primary"
-          size="small"
-          circle
-          @click="newConversation"
-          title="新建对话"
-        >
+        <h3>📝 问题求解</h3>
+        <el-button type="primary" size="small" circle @click="newConversation" title="新建问题">
           <el-icon><Plus /></el-icon>
         </el-button>
       </div>
 
-      <!-- 模型选择 -->
+      <!-- 模型切换 -->
       <div class="model-switch">
         <el-select v-model="selectedModel" size="small" style="width: 100%">
           <el-option label="通义千问 (DashScope)" value="dashscope" />
@@ -23,10 +17,7 @@
         </el-select>
       </div>
 
-      <!-- 隐私模式切换 -->
-      <div class="mode-switch">
-        <el-segmented v-model="chatMode" :options="modeOptions" size="small" block />
-      </div>
+      <!-- 隐私模式 -->
       <div class="privacy-switch">
         <el-switch
           v-model="incognitoMode"
@@ -45,7 +36,7 @@
           :class="{ active: conv.id === currentConversationId }"
           @click="switchConversation(conv)"
         >
-          <span class="conv-title">{{ conv.title || '新对话' }}</span>
+          <span class="conv-title">{{ conv.title || '新问题' }}</span>
           <el-tag v-if="conv.conversationMode === 'INCOGNITO'" size="small" type="danger" class="incognito-tag">无痕</el-tag>
           <el-button
             class="conv-delete"
@@ -56,7 +47,7 @@
             @click.stop="handleDeleteConversation(conv.id)"
           />
         </div>
-        <el-empty v-if="conversations.length === 0" description="暂无对话" :image-size="60" />
+        <el-empty v-if="conversations.length === 0" description="暂无问题" :image-size="60" />
       </div>
 
       <div class="sidebar-footer">
@@ -68,23 +59,28 @@
 
     <!-- 右侧聊天区域 -->
     <main class="chat-main">
-      <!-- 顶部工具栏 -->
       <header class="chat-header">
         <el-button text @click="sidebarCollapsed = !sidebarCollapsed" class="toggle-btn" :class="{ 'always-show': sidebarCollapsed }">
           <el-icon><Expand /></el-icon>
         </el-button>
-        <span class="current-title" v-if="currentConversationId">{{ currentConversationTitle }}</span>
-        <span class="current-title" v-else>校园智能服务小助手</span>
-        <el-tag v-if="chatMode === 'agent'" type="warning" size="small">Agent 模式</el-tag>
-        <el-tag v-else-if="chatMode === 'rag-agent'" type="success" size="small">RAG+Agent</el-tag>
-        <el-tag v-else-if="chatMode === 'rag'" type="info" size="small">RAG 模式</el-tag>
+        <span class="current-title">问题求解助手</span>
+        <el-tag type="success" size="small">解题模式</el-tag>
+        <el-tag size="small" style="margin-left: 6px">{{ selectedModel === 'deepseek' ? 'DeepSeek' : '通义千问' }}</el-tag>
       </header>
 
-      <!-- 消息列表 -->
       <div class="message-area" ref="messageArea">
         <div v-if="!currentConversationId" class="welcome">
-          <h1>校园智能服务小助手 🎓</h1>
-          <p>你好！我可以帮你查询课表、找空教室、校园导航、办事流程等~</p>
+          <h1>📝 问题求解助手</h1>
+          <p>你好！我是你的学习辅导老师，我会引导你<b>独立思考和分步解题</b>，而不是直接给出答案~</p>
+          <div class="tips">
+            <h4>💡 使用建议</h4>
+            <ul>
+              <li>直接输入你的问题，我会引导你逐步思考</li>
+              <li>可以上传题目截图（描述题目内容即可）</li>
+              <li>跟随引导步骤，尝试自己解答</li>
+              <li>支持数学、物理、编程等各学科</li>
+            </ul>
+          </div>
           <div class="quick-actions">
             <el-button
               v-for="q in quickQuestions"
@@ -103,41 +99,23 @@
           :class="msg.role === 'USER' ? 'user-msg' : 'assistant-msg'"
         >
           <div class="msg-avatar">
-            <el-avatar
-              :size="32"
-              :icon="msg.role === 'USER' ? UserFilled : Service"
-            />
+            <el-avatar :size="32" :icon="msg.role === 'USER' ? UserFilled : Service" />
           </div>
           <div class="msg-content">
             <div class="msg-text" v-html="renderMsg(msg)"></div>
-            <div v-if="msg.sources && msg.sources.length" class="msg-sources">
-              <span class="source-label">📚 参考来源：</span>
-              <el-tag
-                v-for="(s, i) in msg.sources"
-                :key="i"
-                size="small"
-                type="info"
-              >{{ s }}</el-tag>
-            </div>
           </div>
         </div>
 
-        <!-- 流式输出中的临时消息 -->
         <div v-if="streaming" class="message assistant-msg">
           <div class="msg-avatar">
             <el-avatar :size="32" :icon="Service" />
           </div>
           <div class="msg-content">
             <div class="msg-text streaming-text" v-html="renderMsg({ content: streamContent })"></div>
-            <div v-if="toolCallingHint" class="tool-hint">
-              <el-icon class="is-loading"><Loading /></el-icon>
-              {{ toolCallingHint }}
-            </div>
           </div>
         </div>
       </div>
 
-      <!-- 底部输入区 -->
       <footer class="input-area">
         <el-input
           v-model="inputText"
@@ -176,29 +154,17 @@ const inputText = ref('')
 const loading = ref(false)
 const streaming = ref(false)
 const streamContent = ref('')
-const toolCallingHint = ref('')
 const sidebarCollapsed = ref(false)
-const chatMode = ref('agent') // 'normal' | 'rag' | 'agent' | 'rag-agent'
+const selectedModel = ref('dashscope')
 const incognitoMode = ref(false)
-const selectedModel = ref('dashscope') // 'dashscope' | 'deepseek'
-
-const modeOptions = [
-  { value: 'normal', label: '普通' },
-  { value: 'rag', label: 'RAG' },
-  { value: 'agent', label: 'Agent' },
-  { value: 'rag-agent', label: 'RAG+Agent' }
-]
 
 const quickQuestions = [
-  '图书馆在哪里？',
-  '查一下课表',
-  '校园卡怎么充值？',
-  '从教学楼到食堂怎么走？'
+  '解方程：2x² + 3x - 5 = 0',
+  '什么是牛顿第二定律？',
+  '写一个 Python 函数判断素数',
+  '如何写好英语作文的开头？'
 ]
 
-const currentConversationTitle = ref('')
-
-// ---- 生命周期 ----
 onMounted(async () => {
   await loadConversations()
   if (conversations.value.length > 0) {
@@ -206,7 +172,6 @@ onMounted(async () => {
   } else {
     await newConversation()
   }
-  // 页面关闭时清理无痕会话
   window.addEventListener('beforeunload', cleanupIncognitoOnClose)
 })
 
@@ -214,24 +179,22 @@ onUnmounted(() => {
   window.removeEventListener('beforeunload', cleanupIncognitoOnClose)
 })
 
-// ---- 页面关闭清理 ----
 function cleanupIncognitoOnClose() {
   conversations.value.forEach(c => {
     if (c.conversationMode === 'INCOGNITO' || c.threadId === 'INCOGNITO') {
       try {
-        navigator.sendBeacon(`/api/conversations/${c.id}`, new Blob())
+        navigator.sendBeacon(`/api/solver/conversations/${c.id}`, new Blob())
       } catch (_) {}
     }
   })
 }
 
-// ---- 方法 ----
 async function loadConversations() {
   try {
-    const res = await getConversations()
-    conversations.value = res?.data || []
+    const res = await fetch('/api/solver/conversations')
+    const data = await res.json()
+    conversations.value = data?.data || []
   } catch (e) {
-    ElMessage.error('加载会话列表失败: ' + e.message)
     conversations.value = []
   }
 }
@@ -239,10 +202,11 @@ async function loadConversations() {
 async function newConversation() {
   try {
     const mode = incognitoMode.value ? 'INCOGNITO' : 'NORMAL'
-    const res = await createConversation(mode)
-    const conv = res?.data
+    const res = await fetch(`/api/solver/conversations?firstMessage=新问题&mode=${mode}`, { method: 'POST' })
+    const data = await res.json()
+    const conv = data?.data
     if (!conv) {
-      ElMessage.error('创建会话失败：返回数据为空')
+      ElMessage.error('创建会话失败')
       return
     }
     conversations.value.unshift(conv)
@@ -253,22 +217,15 @@ async function newConversation() {
 }
 
 async function switchConversation(conv) {
-  if (!conv || !conv.id) {
-    console.warn('switchConversation: conv 无效', conv)
-    return
-  }
+  if (!conv || !conv.id) return
   currentConversationId.value = conv.id
-  currentConversationTitle.value = conv.title || '新对话'
-  // 同步 incognitoMode 状态
   if (conv.conversationMode === 'INCOGNITO' || conv.threadId === 'INCOGNITO') {
     incognitoMode.value = true
   }
   try {
-    const res = await getMessages(conv.id)
-    messages.value = (res?.data || []).map(m => ({
-      ...m,
-      sources: m.metadata ? parseSources(m.metadata) : []
-    }))
+    const res = await fetch(`/api/solver/conversations/${conv.id}/messages`)
+    const data = await res.json()
+    messages.value = (data?.data || []).map(m => ({ ...m, sources: [] }))
   } catch (e) {
     messages.value = []
   }
@@ -276,15 +233,12 @@ async function switchConversation(conv) {
   scrollToBottom()
 }
 
-function onIncognitoChange(val) {
-  // 切换无痕模式时，仅影响后续新建的会话
-  if (!currentConversationId.value) {
-    newConversation()
-  }
+function onIncognitoChange() {
+  if (!currentConversationId.value) newConversation()
 }
 
 async function handleDeleteConversation(id) {
-  await deleteConversation(id)
+  await fetch(`/api/solver/conversations/${id}`, { method: 'DELETE' })
   conversations.value = conversations.value.filter(c => c.id !== id)
   if (currentConversationId.value === id) {
     if (conversations.value.length > 0) {
@@ -300,29 +254,27 @@ async function sendMessage(text) {
   const msg = text?.trim()
   if (!msg || loading.value) return
 
-  if (!currentConversationId.value) {
-    await newConversation()
-  }
+  if (!currentConversationId.value) await newConversation()
 
   inputText.value = ''
   loading.value = true
-  toolCallingHint.value = chatMode.value.includes('agent') ? '思考中...' : ''
 
-  // 添加用户消息
   messages.value.push({ role: 'USER', content: msg })
   await nextTick()
   scrollToBottom()
 
-  // 开始流式输出
   streaming.value = true
   streamContent.value = ''
 
-  const url = getStreamUrl()
   try {
-    const response = await fetch(url, {
+    const response = await fetch('/api/solver/solve', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ conversationId: currentConversationId.value, message: msg, model: selectedModel.value })
+      body: JSON.stringify({
+        conversationId: currentConversationId.value,
+        message: msg,
+        model: selectedModel.value
+      })
     })
 
     if (!response.ok) {
@@ -337,110 +289,54 @@ async function sendMessage(text) {
     while (true) {
       const { done, value } = await reader.read()
       if (done) break
-
       buffer += decoder.decode(value, { stream: true })
-
-      // 解析 SSE 数据
-      const lines = buffer.split('\n')
-      buffer = lines.pop() || ''
-
-      for (const line of lines) {
-        if (line.startsWith('data:')) {
-          const data = line.slice(5).trim()
-          if (data && data !== '[DONE]') {
-            streamContent.value += data
-            // 检测工具调用状态
-            if (chatMode.value.includes('agent')) {
-              if (data.includes('工具调用') || data.includes('Tool调用')) {
-                toolCallingHint.value = '正在查询相关信息...'
-              } else if (data.length > 50) {
-                toolCallingHint.value = ''
-              }
-            }
-          }
-        }
-      }
+      streamContent.value += buffer
+      buffer = ''
     }
 
-    // 完成：保存 AI 消息
     if (streamContent.value) {
-      messages.value.push({
-        role: 'ASSISTANT',
-        content: streamContent.value,
-        sources: []
-      })
+      messages.value.push({ role: 'ASSISTANT', content: streamContent.value, sources: [] })
     }
   } catch (e) {
     ElMessage.error('请求失败: ' + e.message)
     if (streamContent.value) {
-      messages.value.push({
-        role: 'ASSISTANT',
-        content: streamContent.value + '\n\n[连接中断]',
-        sources: []
-      })
+      messages.value.push({ role: 'ASSISTANT', content: streamContent.value + '\n\n[连接中断]', sources: [] })
     }
   } finally {
     streaming.value = false
     streamContent.value = ''
-    toolCallingHint.value = ''
     loading.value = false
     await nextTick()
     scrollToBottom()
   }
 }
 
-function getStreamUrl() {
-  switch (chatMode.value) {
-    case 'agent': return '/api/agent/chat'
-    case 'rag-agent': return '/api/agent/chat/with-rag'
-    case 'rag': return '/api/rag/chat'
-    default: return '/api/chat/stream'
-  }
-}
-
 function renderMsg(msg) {
-  if (msg.role === 'USER') {
-    return escapeHtml(msg.content)
-  }
+  if (msg.role === 'USER') return escapeHtml(msg.content)
   return renderMarkdown(msg.content || '')
 }
 
 function escapeHtml(text) {
   if (!text) return ''
-  return text
-    .replace(/&/g, '&')
-    .replace(/</g, '<')
-    .replace(/>/g, '>')
-    .replace(/\n/g, '<br>')
-}
-
-function parseSources(meta) {
-  if (!meta) return []
-  try {
-    const obj = typeof meta === 'string' ? JSON.parse(meta) : meta
-    if (obj.ragSources) return obj.ragSources
-    if (obj.sources) return obj.sources
-  } catch (_) {}
-  return []
+  return text.replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>').replace(/\n/g, '<br>')
 }
 
 function scrollToBottom() {
   nextTick(() => {
-    const el = document.querySelector('.message-area')
+    const el = document.querySelector('.solver-view .message-area')
     if (el) el.scrollTop = el.scrollHeight
   })
 }
 </script>
 
 <style scoped>
-.chat-view {
+.solver-view {
   display: flex;
   height: 100vh;
   width: 100vw;
-  background: #f5f7fa;
+  background: #f0fdf4;
 }
 
-/* ======== 左侧边栏 ======== */
 .sidebar {
   width: 280px;
   min-width: 280px;
@@ -476,11 +372,6 @@ function scrollToBottom() {
   border-bottom: 1px solid #eee;
 }
 
-.mode-switch {
-  padding: 10px 16px;
-  border-bottom: 1px solid #eee;
-}
-
 .privacy-switch {
   padding: 8px 16px;
   border-bottom: 1px solid #eee;
@@ -506,14 +397,8 @@ function scrollToBottom() {
   gap: 6px;
 }
 
-.conv-item:hover {
-  background: #f0f2f5;
-}
-
-.conv-item.active {
-  background: #ecf5ff;
-  color: #409eff;
-}
+.conv-item:hover { background: #f0f2f5; }
+.conv-item.active { background: #dcfce7; color: #16a34a; }
 
 .conv-title {
   flex: 1;
@@ -523,27 +408,22 @@ function scrollToBottom() {
   font-size: 14px;
 }
 
-.incognito-tag {
-  flex-shrink: 0;
-}
+.incognito-tag { flex-shrink: 0; }
 
 .conv-delete {
   opacity: 0;
   transition: opacity 0.2s;
   flex-shrink: 0;
 }
-
-.conv-item:hover .conv-delete {
-  opacity: 1;
-}
+.conv-item:hover .conv-delete { opacity: 1; }
 
 .sidebar-footer {
-  padding: 10px;
+  padding: 12px;
   border-top: 1px solid #eee;
-  text-align: center;
+  display: flex;
+  justify-content: center;
 }
 
-/* ======== 右侧聊天区域 ======== */
 .chat-main {
   flex: 1;
   display: flex;
@@ -554,24 +434,21 @@ function scrollToBottom() {
 .chat-header {
   display: flex;
   align-items: center;
-  gap: 10px;
   padding: 12px 20px;
   background: #fff;
-  border-bottom: 1px solid #e4e7ed;
-  flex-shrink: 0;
+  border-bottom: 1px solid #dcfce7;
+  gap: 10px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
 }
+
+.toggle-btn { flex-shrink: 0; }
+.always-show { display: inline-flex !important; }
 
 .current-title {
   flex: 1;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.toggle-btn {
-  display: inline-flex;
+  color: #303133;
 }
 
 .message-area {
@@ -581,190 +458,100 @@ function scrollToBottom() {
 }
 
 .welcome {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
   text-align: center;
+  padding-top: 80px;
 }
 
 .welcome h1 {
   font-size: 28px;
-  color: #303133;
+  color: #16a34a;
   margin-bottom: 12px;
 }
 
 .welcome p {
-  color: #909399;
+  color: #606266;
   margin-bottom: 24px;
+  line-height: 1.6;
+}
+
+.welcome .tips {
+  text-align: left;
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin: 0 auto 24px;
+  max-width: 480px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.welcome .tips h4 {
+  margin-bottom: 10px;
+  color: #16a34a;
+}
+
+.welcome .tips ul {
+  padding-left: 20px;
+  line-height: 2;
+  color: #606266;
 }
 
 .quick-actions {
   display: flex;
-  flex-wrap: wrap;
   gap: 8px;
   justify-content: center;
+  flex-wrap: wrap;
 }
 
-/* ======== 消息气泡 ======== */
 .message {
   display: flex;
   gap: 12px;
   margin-bottom: 20px;
-  animation: fadeIn 0.3s;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
+.user-msg { flex-direction: row-reverse; }
 
-.user-msg {
-  flex-direction: row-reverse;
-}
+.msg-avatar { flex-shrink: 0; }
 
 .msg-content {
-  max-width: 70%;
+  max-width: 75%;
+  background: #fff;
+  border-radius: 12px;
+  padding: 12px 16px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+
+.user-msg .msg-content {
+  background: #16a34a;
+  color: #fff;
 }
 
 .msg-text {
-  padding: 10px 14px;
-  border-radius: 12px;
-  line-height: 1.6;
   font-size: 14px;
+  line-height: 1.7;
   word-break: break-word;
 }
 
-.user-msg .msg-text {
-  background: #409eff;
-  color: #fff;
-  border-bottom-right-radius: 4px;
-}
-
-.assistant-msg .msg-text {
-  background: #fff;
-  color: #303133;
-  border-bottom-left-radius: 4px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-}
-
-/* Markdown 样式深作用域 */
-.msg-text :deep(p) { margin: 0 0 8px; }
-.msg-text :deep(p:last-child) { margin-bottom: 0; }
-.msg-text :deep(code) {
-  background: rgba(0,0,0,0.06);
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-size: 13px;
-}
+.msg-text :deep(p) { margin: 4px 0; }
 .msg-text :deep(pre) {
-  background: #282c34;
-  color: #abb2bf;
-  padding: 14px;
+  background: #f5f7fa;
   border-radius: 8px;
+  padding: 12px;
   overflow-x: auto;
-  margin: 8px 0;
-}
-.msg-text :deep(pre code) {
-  background: none;
-  padding: 0;
-  color: inherit;
-}
-.msg-text :deep(ul), .msg-text :deep(ol) { padding-left: 20px; margin: 8px 0; }
-.msg-text :deep(li) { margin-bottom: 4px; }
-.msg-text :deep(blockquote) {
-  border-left: 3px solid #409eff;
-  padding-left: 12px;
-  color: #606266;
-  margin: 8px 0;
-}
-.msg-text :deep(table) {
-  border-collapse: collapse;
-  width: 100%;
-  margin: 8px 0;
-}
-.msg-text :deep(th), .msg-text :deep(td) {
-  border: 1px solid #ddd;
-  padding: 6px 10px;
-  text-align: left;
-}
-.msg-text :deep(th) { background: #f5f7fa; }
-
-.streaming-text::after {
-  content: '▌';
-  animation: blink 1s infinite;
-}
-
-@keyframes blink {
-  0%, 50% { opacity: 1; }
-  51%, 100% { opacity: 0; }
-}
-
-.tool-hint {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 6px;
-  padding: 6px 12px;
-  background: #fdf6ec;
-  color: #e6a23c;
-  border-radius: 8px;
   font-size: 13px;
 }
 
-.msg-sources {
-  margin-top: 8px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
+.streaming-text { color: #909399; }
 
-.source-label {
-  font-size: 12px;
-  color: #909399;
-}
-
-/* ======== 底部输入 ======== */
 .input-area {
   display: flex;
-  align-items: flex-end;
   gap: 10px;
-  padding: 14px 20px;
+  padding: 16px 20px;
   background: #fff;
-  border-top: 1px solid #e4e7ed;
-  flex-shrink: 0;
+  border-top: 1px solid #dcfce7;
+  align-items: flex-end;
 }
 
 .input-area :deep(.el-textarea__inner) {
-  border-radius: 12px;
-}
-
-.input-area .el-button {
-  border-radius: 12px;
-  height: 40px;
-  width: 40px;
-}
-
-/* ======== 响应式 ======== */
-@media (max-width: 768px) {
-  .sidebar {
-    position: fixed;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    z-index: 100;
-    box-shadow: 2px 0 8px rgba(0,0,0,0.1);
-  }
-
-  .sidebar.collapsed {
-    width: 0;
-    min-width: 0;
-  }
-
-  .msg-content {
-    max-width: 85%;
-  }
+  border-radius: 10px;
 }
 </style>

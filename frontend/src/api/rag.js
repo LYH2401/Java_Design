@@ -1,7 +1,7 @@
 import api from './index'
 
 export const ragChat = (conversationId, message) => {
-  return fetch('/api/chat/rag', {
+  return fetch('/api/rag/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ conversationId, message })

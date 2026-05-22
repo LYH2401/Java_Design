@@ -8,7 +8,15 @@ import java.util.List;
 public interface ConversationService {
 
     /**
-     * 创建新会话（自动从首条消息截取标题前 20 字）
+     * 创建新会话（指定模式）
+     * @param userId       用户 ID
+     * @param firstMessage 首条消息内容（用于生成标题）
+     * @param mode         会话模式：NORMAL（保留记录）/ INCOGNITO（无痕）
+     */
+    Conversation createConversation(Long userId, String firstMessage, String mode);
+
+    /**
+     * 创建新会话（默认 NORMAL 模式）
      * @param userId       用户 ID
      * @param firstMessage 首条消息内容（用于生成标题）
      */
@@ -37,6 +45,7 @@ public interface ConversationService {
 
     /**
      * 清理过期会话（删除 N 天前创建的会话及关联消息）
+     * 同时清理所有 INCOGNITO 模式会话
      * @param retentionDays 保留天数
      * @return              清理的会话数量
      */
