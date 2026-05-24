@@ -435,7 +435,7 @@ function scrollToBottom() {
 <style scoped>
 .chat-view {
   display: flex;
-  height: 100vh;
+  height: calc(100vh - 44px);
   width: 100vw;
   background: #f5f7fa;
 }
