@@ -1,137 +1,155 @@
 @echo off
+cd /d "%~dp0"
 chcp 65001 >nul
 echo ========================================
-echo   校园智能服务小助手 - 启动脚本
+echo   Campus Assistant - Launcher
 echo ========================================
 echo.
-echo 请选择启动模式:
-echo   [1] 直接启动 (推荐, 无需Docker)
-echo   [2] Docker 启动 (需要Docker Desktop)
-echo   [3] 退出
+echo Select startup mode:
+echo   [1] Direct start (recommended, no Docker)
+echo   [2] Docker start (requires Docker Desktop)
+echo   [3] Exit
 echo.
-set /p MODE="请输入选项 [1/2/3]: "
+set /p MODE="Enter option [1/2/3]: "
 
 if "%MODE%"=="1" goto DIRECT_START
 if "%MODE%"=="2" goto DOCKER_START
 if "%MODE%"=="3" exit /b 0
-echo 无效选项，请输入 1、2 或 3
+echo Invalid option, enter 1, 2 or 3
 goto END
 
 :DIRECT_START
 echo.
 echo ========================================
-echo   直接启动模式
+echo   Direct Start Mode
 echo ========================================
 echo.
-echo [前提] 请确保:
-echo   1. MySQL 8.0 已在本地运行 (端口 3306)
-echo   2. JDK 17+ 已安装
-echo   3. 数据库 campus_assistant 已创建
-echo   4. Maven 已安装 (如JAR不存在需重新构建)
+echo [Prerequisites] Please ensure:
+echo   1. MySQL 8.0 is running locally (port 3306)
+echo   2. JDK 17+ is installed
+echo   3. Database 'campus_assistant' is created
+echo   4. Maven is installed (if JAR needs rebuild)
 echo.
 
-:: 检查 .env 文件
+:: Check .env file
 if not exist .env (
-    echo [提示] 未找到 .env 文件，正在从 .env.example 复制...
+    echo [INFO] .env not found, copying from .env.example...
     copy .env.example .env >nul
-    echo [提示] 请编辑 .env 文件，填入必要配置后重新运行本脚本
+    echo [INFO] Please edit .env with your config, then re-run this script
     pause
     exit /b 1
 )
 
-:: 从 .env 读取 MySQL 密码
+:: Read MySQL password from .env
 for /f "tokens=2 delims==" %%a in ('findstr "MYSQL_ROOT_PASSWORD" .env') do set MYSQL_PASS=%%a
 if "%MYSQL_PASS%"=="" (
-    echo [警告] 未在 .env 中找到 MYSQL_ROOT_PASSWORD，使用默认密码 campus123
+    echo [WARN] MYSQL_ROOT_PASSWORD not found in .env, using default: campus123
     set MYSQL_PASS=campus123
 )
 
-:: 检查 JAR 是否存在
+:: Read API keys from .env (for -D fallback)
+for /f "tokens=2 delims==" %%a in ('findstr "AI_DASHSCOPE_API_KEY" .env') do set DASHSCOPE_KEY=%%a
+for /f "tokens=2 delims==" %%a in ('findstr "DEEPSEEK_API" .env') do set DEEPSEEK_KEY=%%a
+
+:: Check JAR exists
 if not exist "target\campus-assistant-1.0.0.jar" (
-    echo [错误] 未找到 JAR 文件，正在用 Maven 构建...
+    echo [ERROR] JAR not found, building with Maven...
     call mvn package -DskipTests -q
     if %errorlevel% neq 0 (
-        echo [错误] Maven 构建失败！
+        echo [ERROR] Maven build failed!
         pause
         exit /b 1
     )
-    echo [完成] Maven 构建成功
+    echo [OK] Maven build succeeded
 )
 
 echo.
-echo [启动] 正在启动 Spring Boot 应用...
-echo         URL: http://localhost:8080
-echo         Swagger: http://localhost:8080/swagger-ui.html
+echo [START] Launching Spring Boot application...
+echo         URL:      http://localhost:8080
+echo         Swagger:  http://localhost:8080/swagger-ui.html
 echo.
-echo 按 Ctrl+C 停止服务
+echo Press Ctrl+C to stop
 echo ========================================
 echo.
 
-:: 使用 JVM 系统属性传递密码（比环境变量更可靠）
-"E:\JDK\jdk-25_windows-x64_bin\jdk-25.0.2\bin\java.exe" -Dspring.datasource.password=%MYSQL_PASS% -jar target\campus-assistant-1.0.0.jar
+:: Auto-detect Java from JAVA_HOME, fallback to PATH
+set JAVA_CMD=java
+if defined JAVA_HOME (
+    if exist "%JAVA_HOME%\bin\java.exe" (
+        set JAVA_CMD=%JAVA_HOME%\bin\java.exe
+    )
+)
+
+:: Build -D arguments for API keys (as fallback if dotenv fails)
+set EXTRA_OPTS=-Dspring.datasource.password=%MYSQL_PASS%
+if not "%DASHSCOPE_KEY%"=="" set EXTRA_OPTS=%EXTRA_OPTS% -DAI_DASHSCOPE_API_KEY=%DASHSCOPE_KEY%
+if not "%DEEPSEEK_KEY%"=="" set EXTRA_OPTS=%EXTRA_OPTS% -DDEEPSEEK_API=%DEEPSEEK_KEY%
+
+"%JAVA_CMD%" %EXTRA_OPTS% -jar target\campus-assistant-1.0.0.jar
 goto END
 
 :DOCKER_START
 echo.
 echo ========================================
-echo   Docker 启动模式
+echo   Docker Start Mode
 echo ========================================
 echo.
 
-echo [检查] Docker 环境...
+echo [CHECK] Docker environment...
 docker --version >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [错误] 请先安装 Docker Desktop
-    echo        下载地址: https://www.docker.com/products/docker-desktop/
+    echo [ERROR] Docker Desktop is not installed
+    echo        Download: https://www.docker.com/products/docker-desktop/
     pause
     exit /b 1
 )
-echo [通过] Docker 已安装
+echo [OK] Docker is installed
 
 echo.
 
 if not exist .env (
-    echo [提示] 未找到 .env 文件，正在从 .env.example 复制...
+    echo [INFO] .env not found, copying from .env.example...
     copy .env.example .env >nul
-    echo [重要] 请编辑 .env 文件，填入你的阿里云百炼 API Key:
+    echo [IMPORTANT] Please edit .env and fill in your API keys:
     echo        AI_DASHSCOPE_API_KEY=sk-your-api-key-here
+    echo        DEEPSEEK_API=sk-your-deepseek-key-here
     echo.
-    echo 编辑完成后请重新运行本脚本。
+    echo Then re-run this script.
     pause
     exit /b 1
 )
 
-echo [检查] .env 文件已存在
+echo [OK] .env file exists
 
 echo.
-echo [构建] 正在构建 Docker 镜像...
+echo [BUILD] Building Docker image...
 docker compose build
 if %errorlevel% neq 0 (
-    echo [错误] Docker 镜像构建失败！
+    echo [ERROR] Docker image build failed!
     pause
     exit /b 1
 )
 
 echo.
-echo [启动] 正在启动服务...
+echo [START] Starting services...
 docker compose up -d
 if %errorlevel% neq 0 (
-    echo [错误] 服务启动失败！
+    echo [ERROR] Service startup failed!
     pause
     exit /b 1
 )
 
 echo.
 echo ========================================
-echo   启动完成！
+echo   Startup Complete!
 echo.
-echo   前端页面: http://localhost:8080
-echo   Swagger:  http://localhost:8080/swagger-ui.html
+echo   Frontend:  http://localhost:8080
+echo   Swagger:   http://localhost:8080/swagger-ui.html
 echo.
-echo   管理命令:
-echo     查看日志: docker compose logs -f
-echo     停止服务: docker compose down
-echo     重启服务: docker compose restart
+echo   Commands:
+echo     View logs:    docker compose logs -f
+echo     Stop:         docker compose down
+echo     Restart:      docker compose restart
 echo ========================================
 
 :END
