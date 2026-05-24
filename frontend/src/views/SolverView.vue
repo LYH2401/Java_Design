@@ -332,7 +332,7 @@ function scrollToBottom() {
 <style scoped>
 .solver-view {
   display: flex;
-  height: 100vh;
+  height: calc(100vh - 44px);
   width: 100vw;
   background: #f0fdf4;
 }

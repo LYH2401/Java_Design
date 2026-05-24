@@ -72,12 +72,49 @@ echo Press Ctrl+C to stop
 echo ========================================
 echo.
 
-:: Auto-detect Java from JAVA_HOME, fallback to PATH
-set JAVA_CMD=java
+:: === Auto-detect JDK 17+ ===
+:: Priority: 1) JAVA_HOME  2) known JDK 25 path  3) PATH java
+set JAVA_CMD=
+set JAVA_VER=0
+
+:: Try JAVA_HOME first
 if defined JAVA_HOME (
     if exist "%JAVA_HOME%\bin\java.exe" (
-        set JAVA_CMD=%JAVA_HOME%\bin\java.exe
+        set "JAVA_CMD=%JAVA_HOME%\bin\java.exe"
     )
+)
+
+:: Try known JDK 25 path
+if "%JAVA_CMD%"=="" (
+    if exist "E:\JDK\jdk-25_windows-x64_bin\jdk-25.0.2\bin\java.exe" (
+        set "JAVA_CMD=E:\JDK\jdk-25_windows-x64_bin\jdk-25.0.2\bin\java.exe"
+    )
+)
+
+:: Fallback to PATH
+if "%JAVA_CMD%"=="" set "JAVA_CMD=java"
+
+:: Verify Java version >= 17
+for /f "tokens=3" %%v in ('"%JAVA_CMD%" -version 2^>^&1 ^| findstr /i "version"') do (
+    set VER_STRING=%%v
+)
+:: Strip quotes from version string
+set VER_STRING=%VER_STRING:"=%
+:: Parse major version (handle 1.8.0, 17.0.x, 25.0.x formats)
+for /f "tokens=1 delims=." %%a in ("%VER_STRING%") do set JAVA_MAJOR=%%a
+if %JAVA_MAJOR% EQU 1 (
+    for /f "tokens=2 delims=." %%b in ("%VER_STRING%") do set JAVA_MAJOR=%%b
+)
+
+echo [CHECK] Java command : %JAVA_CMD%
+echo [CHECK] Java version : %VER_STRING% (major=%JAVA_MAJOR%)
+
+if %JAVA_MAJOR% LSS 17 (
+    echo [ERROR] JDK 17+ is required, but found version %JAVA_MAJOR%
+    echo         Install JDK 17+ from: https://adoptium.net/
+    echo         Or set JAVA_HOME to point to a JDK 17+ installation
+    pause
+    exit /b 1
 )
 
 :: Build -D arguments for API keys (as fallback if dotenv fails)
@@ -85,6 +122,8 @@ set EXTRA_OPTS=-Dspring.datasource.password=%MYSQL_PASS%
 if not "%DASHSCOPE_KEY%"=="" set EXTRA_OPTS=%EXTRA_OPTS% -DAI_DASHSCOPE_API_KEY=%DASHSCOPE_KEY%
 if not "%DEEPSEEK_KEY%"=="" set EXTRA_OPTS=%EXTRA_OPTS% -DDEEPSEEK_API=%DEEPSEEK_KEY%
 
+echo [START] Using Java: %JAVA_CMD%
+echo.
 "%JAVA_CMD%" %EXTRA_OPTS% -jar target\campus-assistant-1.0.0.jar
 goto END
 
