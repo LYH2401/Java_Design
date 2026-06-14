@@ -113,15 +113,16 @@ if defined JAVA_HOME (
 :: --- Strategy 2: Scan common JDK directories recursively ---
 echo          Scanning common JDK install locations...
 
-:: Collect candidate directories: list all folders under E:\JDK, C:\Program Files\Java etc.
-set "SEARCH_PATHS=E:\JDK C:\Program Files\Java C:\Program Files\Eclipse Adoptium D:\JDK C:\Java"
+:: Use ; as separator to support paths with spaces
+set "SEARCH_LIST=E:\JDK;C:\Program Files\Java;C:\Program Files\Eclipse Adoptium;D:\JDK;C:\Java"
 
-for %%p in (%SEARCH_PATHS%) do (
-    if exist "%%p\" (
-        for /f "delims=" %%d in ('dir /b /ad "%%p" 2^>nul') do (
-            if exist "%%p\%%d\bin\java.exe" (
-                call :try_java "%%p\%%d\bin\java.exe" && (
-                    set "FOUND_JAVA=%%p\%%d\bin\java.exe"
+for %%p in ("!SEARCH_LIST:;=" "!") do (
+    set "SP=%%~p"
+    if exist "!SP!\" (
+        for /f "delims=" %%d in ('dir /b /ad "!SP!" 2^>nul') do (
+            if exist "!SP!\%%d\bin\java.exe" (
+                call :try_java "!SP!\%%d\bin\java.exe" && (
+                    set "FOUND_JAVA=!SP!\%%d\bin\java.exe"
                     goto :java_ok
                 )
             )
@@ -291,31 +292,33 @@ exit /b 0
 set "TEST_JAVA=%~1"
 if not exist "!TEST_JAVA!" exit /b 1
 
-:: Get version string from java -version (goes to stderr)
-for /f "tokens=3" %%v in ('"!TEST_JAVA!" -version 2^>^&1 ^| findstr /i "version"') do (
-    set "VER_STR=%%~v"
-)
+set "VER_STR="
+set "JV_FILE=%TEMP%\jv_!RANDOM!.txt"
 
-:: If we couldn't get version, skip this candidate
+"!TEST_JAVA!" -version 2>"!JV_FILE!" 1>nul
+findstr /i "version" "!JV_FILE!" >nul 2>&1
+if !errorlevel! neq 0 (del "!JV_FILE!" 2>nul & exit /b 1)
+
+for /f "usebackq tokens=3" %%v in ("!JV_FILE!") do (
+    set "VER_STR=%%~v"
+    goto :try_java_done
+)
+:try_java_done
+del "!JV_FILE!" 2>nul
+
 if "!VER_STR!"=="" exit /b 1
 
-:: Parse major version
-:: Formats: "1.8.0_491" -> major=8, "17.0.9" -> major=17, "25.0.2" -> major=25
 set "MAJOR=!VER_STR!"
-for /f "tokens=1 delims=." %%a in ("!VER_STR!") do (
-    set "MAJOR=%%a"
-)
+for /f "tokens=1 delims=." %%a in ("!VER_STR!") do set "MAJOR=%%a"
 if "!MAJOR!"=="1" (
     for /f "tokens=2 delims=." %%b in ("!VER_STR!") do set "MAJOR=%%b"
 )
 
-:: Check if major >= 17
 if !MAJOR! GEQ 17 (
     set "JAVA_VER=!VER_STR!"
     exit /b 0
 )
 
-:: Not suitable, clean up and return failure
 set "VER_STR="
 set "MAJOR="
 exit /b 1
