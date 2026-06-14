@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -68,6 +69,8 @@ public class SolverServiceImpl implements SolverService {
                 .user(prompt)
                 .stream()
                 .content()
+                .buffer(Duration.ofMillis(80))
+                .map(chunks -> String.join("", chunks))
                 .doOnNext(fullResponse::append)
                 .doOnComplete(() -> {
                     String response = fullResponse.toString();

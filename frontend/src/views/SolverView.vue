@@ -290,8 +290,18 @@ async function sendMessage(text) {
       const { done, value } = await reader.read()
       if (done) break
       buffer += decoder.decode(value, { stream: true })
-      streamContent.value += buffer
-      buffer = ''
+
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
+
+      for (const line of lines) {
+        if (line.startsWith('data:')) {
+          const data = line.slice(5).trim()
+          if (data && data !== '[DONE]') {
+            streamContent.value += data
+          }
+        }
+      }
     }
 
     if (streamContent.value) {
