@@ -141,3 +141,77 @@ CREATE TABLE IF NOT EXISTS campus_location (
     INDEX idx_category (category),
     INDEX idx_name (name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='校园地点信息';
+
+-- --------------------------------------------
+-- 10. 维修员表（阶段 9-1 新增）
+-- --------------------------------------------
+CREATE TABLE IF NOT EXISTS maintainer (
+    id             BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '维修员ID',
+    user_id        BIGINT       DEFAULT NULL COMMENT '关联用户ID（可选）',
+    name           VARCHAR(64)  NOT NULL COMMENT '姓名',
+    phone          VARCHAR(20)  DEFAULT NULL COMMENT '联系电话',
+    skill_category VARCHAR(64)  DEFAULT NULL COMMENT '技能分类（水电/木工/网络/空调/其他）',
+    status         VARCHAR(16)  NOT NULL DEFAULT 'AVAILABLE' COMMENT '状态（AVAILABLE/BUSY/REST）',
+    create_time    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    INDEX idx_maintainer_status (status),
+    CONSTRAINT fk_maintainer_user FOREIGN KEY (user_id) REFERENCES sys_user(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='维修员';
+
+-- --------------------------------------------
+-- 11. 报修单主表（阶段 9-1 新增）
+-- --------------------------------------------
+CREATE TABLE IF NOT EXISTS repair_order (
+    id             BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '报修单ID',
+    order_no       VARCHAR(32)  NOT NULL COMMENT '报修单号（REP+年月日时分+4位随机数）',
+    user_id        BIGINT       NOT NULL COMMENT '报修用户ID',
+    title          VARCHAR(256) NOT NULL COMMENT '报修标题',
+    description    TEXT         DEFAULT NULL COMMENT '报修描述',
+    location       VARCHAR(256) DEFAULT NULL COMMENT '报修地点',
+    urgency_level  VARCHAR(16)  NOT NULL DEFAULT 'NORMAL' COMMENT '紧急程度（URGENT/HIGH/NORMAL/LOW）',
+    status         VARCHAR(32)  NOT NULL DEFAULT 'PENDING' COMMENT '状态（PENDING/ASSIGNED/REPAIRING/COMPLETED/CANCELLED）',
+    image_urls     JSON         DEFAULT NULL COMMENT '报修图片URL列表',
+    created_by     VARCHAR(64)  DEFAULT NULL COMMENT '报修人姓名（冗余）',
+    assigned_to    BIGINT       DEFAULT NULL COMMENT '指派维修员ID',
+    assigned_time  DATETIME     DEFAULT NULL COMMENT '派单时间',
+    completed_time DATETIME     DEFAULT NULL COMMENT '完成时间',
+    create_time    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time    DATETIME     DEFAULT NULL COMMENT '更新时间',
+    UNIQUE KEY uk_order_no (order_no),
+    INDEX idx_user_id (user_id),
+    INDEX idx_status (status),
+    INDEX idx_order_no (order_no),
+    CONSTRAINT fk_repair_order_user FOREIGN KEY (user_id) REFERENCES sys_user(id),
+    CONSTRAINT fk_repair_order_maintainer FOREIGN KEY (assigned_to) REFERENCES maintainer(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='报修单';
+
+-- --------------------------------------------
+-- 12. 派单记录表（阶段 9-1 新增）
+-- --------------------------------------------
+CREATE TABLE IF NOT EXISTS dispatch_log (
+    id             BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '派单记录ID',
+    order_id       BIGINT       NOT NULL COMMENT '报修单ID',
+    maintainer_id  BIGINT       NOT NULL COMMENT '维修员ID',
+    dispatch_time  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '派单时间',
+    accept_time    DATETIME     DEFAULT NULL COMMENT '接单时间',
+    complete_time  DATETIME     DEFAULT NULL COMMENT '完成时间',
+    reject_reason  VARCHAR(512) DEFAULT NULL COMMENT '拒单原因',
+    status         VARCHAR(32)  NOT NULL DEFAULT 'DISPATCHED' COMMENT '状态（DISPATCHED/ACCEPTED/REJECTED/COMPLETED）',
+    INDEX idx_order_id (order_id),
+    CONSTRAINT fk_dispatch_log_order FOREIGN KEY (order_id) REFERENCES repair_order(id),
+    CONSTRAINT fk_dispatch_log_maintainer FOREIGN KEY (maintainer_id) REFERENCES maintainer(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='派单记录';
+
+-- --------------------------------------------
+-- 13. 报修评价表（阶段 9-1 新增）
+-- --------------------------------------------
+CREATE TABLE IF NOT EXISTS repair_review (
+    id          BIGINT    NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '评价ID',
+    order_id    BIGINT    NOT NULL COMMENT '报修单ID',
+    user_id     BIGINT    NOT NULL COMMENT '评价用户ID',
+    rating      TINYINT   NOT NULL COMMENT '评分（1-5星）',
+    comment     TEXT      DEFAULT NULL COMMENT '评价内容',
+    create_time DATETIME  NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    UNIQUE KEY uk_order_id (order_id),
+    CONSTRAINT fk_repair_review_order FOREIGN KEY (order_id) REFERENCES repair_order(id),
+    CONSTRAINT fk_repair_review_user FOREIGN KEY (user_id) REFERENCES sys_user(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='报修评价';

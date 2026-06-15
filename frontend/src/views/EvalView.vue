@@ -179,6 +179,43 @@
 
       <el-empty v-else description="输入问题后点击「对比」开始 RAG vs Non-RAG 效果评估" />
     </el-card>
+
+    <!-- ============ 报修服务统计 ============ -->
+    <el-card shadow="hover" class="repair-section">
+      <template #header>
+        <span><el-icon><Tools /></el-icon> 校园报修服务统计</span>
+      </template>
+
+      <el-skeleton :loading="repairChartsLoading" animated :count="2">
+        <el-row :gutter="16">
+          <!-- 状态分布饼图 -->
+          <el-col :xs="24" :md="12">
+            <el-card shadow="none" class="chart-card">
+              <template #header><span>报修状态分布</span></template>
+              <div ref="statusPieRef" class="chart-box"></div>
+            </el-card>
+          </el-col>
+
+          <!-- 紧急程度柱状图 -->
+          <el-col :xs="24" :md="12">
+            <el-card shadow="none" class="chart-card">
+              <template #header><span>紧急程度分布</span></template>
+              <div ref="urgencyBarRef" class="chart-box"></div>
+            </el-card>
+          </el-col>
+        </el-row>
+
+        <el-row :gutter="16" style="margin-top: 16px">
+          <!-- 近30天趋势折线图 -->
+          <el-col :span="24">
+            <el-card shadow="none" class="chart-card">
+              <template #header><span>近 30 天报修趋势</span></template>
+              <div ref="trendLineRef" class="chart-box-wide"></div>
+            </el-card>
+          </el-col>
+        </el-row>
+      </el-skeleton>
+    </el-card>
   </div>
 </template>
 
@@ -190,6 +227,7 @@ import { marked } from 'marked'
 import hljs from 'highlight.js'
 import { compareRagVsNonRag, getEvalStats } from '../api/eval'
 import { getAgentStats, getExecutionLogs } from '../api/agent'
+import { getRepairStats, getRepairTrend, getStatusDistribution, getUrgencyDistribution } from '../api/repair'
 
 // ==================== 状态 ====================
 const loading = ref(false)
@@ -207,8 +245,15 @@ const stats = ref({
 // 图表引用
 const toolPieRef = ref(null)
 const intentBarRef = ref(null)
+const statusPieRef = ref(null)
+const urgencyBarRef = ref(null)
+const trendLineRef = ref(null)
 let toolPieChart = null
 let intentBarChart = null
+let statusPieChart = null
+let urgencyBarChart = null
+let trendLineChart = null
+const repairChartsLoading = ref(true)
 
 // ==================== Markdown 渲染 ====================
 marked.setOptions({
@@ -314,6 +359,94 @@ async function loadIntentChart() {
   }
 }
 
+// ==================== 报修图表 ====================
+async function loadRepairCharts() {
+  repairChartsLoading.value = true
+  try {
+    await Promise.all([loadStatusPie(), loadUrgencyBar(), loadTrendLine()])
+  } finally {
+    repairChartsLoading.value = false
+  }
+}
+
+async function loadStatusPie() {
+  try {
+    const res = await getStatusDistribution()
+    const data = res?.data
+    if (!data) return
+
+    const names = ['待派单', '已派单', '维修中', '已完成', '已取消']
+    const keys = ['PENDING', 'ASSIGNED', 'REPAIRING', 'COMPLETED', 'CANCELLED']
+    const colors = ['#909399', '#409eff', '#e6a23c', '#67c23a', '#f56c6c']
+    const pieData = keys.map((k, i) => ({ name: names[i], value: data[k] || 0, itemStyle: { color: colors[i] } }))
+
+    const option = {
+      tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+      legend: { bottom: 0 },
+      series: [{
+        type: 'pie', radius: ['40%', '70%'], center: ['50%', '45%'],
+        label: { formatter: '{b}\n{d}%' },
+        data: pieData
+      }]
+    }
+    statusPieChart?.setOption(option, true)
+  } catch (e) { console.error('加载状态分布失败', e) }
+}
+
+async function loadUrgencyBar() {
+  try {
+    const res = await getUrgencyDistribution()
+    const data = res?.data
+    if (!data) return
+
+    const names = ['紧急', '高', '普通', '低']
+    const keys = ['URGENT', 'HIGH', 'NORMAL', 'LOW']
+    const values = keys.map(k => data[k] || 0)
+
+    const option = {
+      tooltip: { trigger: 'axis' },
+      grid: { left: '3%', right: '4%', bottom: '8%', top: '5%', containLabel: true },
+      xAxis: { type: 'category', data: names },
+      yAxis: { type: 'value', minInterval: 1, name: '数量' },
+      series: [{
+        type: 'bar', data: values, barMaxWidth: 50,
+        itemStyle: {
+          borderRadius: [6, 6, 0, 0],
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: '#f56c6c' }, { offset: 1, color: '#fab6b6' }
+          ])
+        },
+        label: { show: true, position: 'top' }
+      }]
+    }
+    urgencyBarChart?.setOption(option, true)
+  } catch (e) { console.error('加载紧急程度分布失败', e) }
+}
+
+async function loadTrendLine() {
+  try {
+    const res = await getRepairTrend(30)
+    const list = res?.data || []
+    const dates = list.map(d => d.date)
+    const counts = list.map(d => d.count)
+
+    const option = {
+      tooltip: { trigger: 'axis' },
+      grid: { left: '3%', right: '4%', bottom: '3%', top: '5%', containLabel: true },
+      xAxis: { type: 'category', data: dates, axisLabel: { rotate: 30, fontSize: 10 } },
+      yAxis: { type: 'value', minInterval: 1, name: '报修数' },
+      series: [{
+        type: 'line', data: counts, smooth: true, symbol: 'circle', symbolSize: 6,
+        itemStyle: { color: '#409eff' },
+        areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: 'rgba(64,158,255,0.25)' }, { offset: 1, color: 'rgba(64,158,255,0.02)' }
+        ])}
+      }]
+    }
+    trendLineChart?.setOption(option, true)
+  } catch (e) { console.error('加载趋势失败', e) }
+}
+
 // ==================== RAG 对比 ====================
 async function runCompare() {
   const q = compareQuestion.value.trim()
@@ -357,7 +490,7 @@ function copyText(text) {
 async function refreshAll() {
   loading.value = true
   try {
-    await Promise.all([loadStats(), loadToolChart(), loadIntentChart()])
+    await Promise.all([loadStats(), loadToolChart(), loadIntentChart(), loadRepairCharts()])
   } finally {
     loading.value = false
   }
@@ -365,26 +498,35 @@ async function refreshAll() {
 
 // ==================== 图表生命周期 ====================
 function initCharts() {
-  if (toolPieRef.value) {
-    toolPieChart = echarts.init(toolPieRef.value)
-  }
-  if (intentBarRef.value) {
-    intentBarChart = echarts.init(intentBarRef.value)
-  }
+  if (toolPieRef.value) toolPieChart = echarts.init(toolPieRef.value)
+  if (intentBarRef.value) intentBarChart = echarts.init(intentBarRef.value)
+  if (statusPieRef.value) statusPieChart = echarts.init(statusPieRef.value)
+  if (urgencyBarRef.value) urgencyBarChart = echarts.init(urgencyBarRef.value)
+  if (trendLineRef.value) trendLineChart = echarts.init(trendLineRef.value)
   loadToolChart()
   loadIntentChart()
+  loadRepairCharts()
 }
 
 function resizeCharts() {
   toolPieChart?.resize()
   intentBarChart?.resize()
+  statusPieChart?.resize()
+  urgencyBarChart?.resize()
+  trendLineChart?.resize()
 }
 
 function disposeCharts() {
   toolPieChart?.dispose()
   intentBarChart?.dispose()
+  statusPieChart?.dispose()
+  urgencyBarChart?.dispose()
+  trendLineChart?.dispose()
   toolPieChart = null
   intentBarChart = null
+  statusPieChart = null
+  urgencyBarChart = null
+  trendLineChart = null
 }
 
 onMounted(() => {
@@ -468,6 +610,11 @@ onUnmounted(() => {
 .chart-box {
   width: 100%;
   height: 320px;
+}
+
+.chart-box-wide {
+  width: 100%;
+  height: 300px;
 }
 
 /* ---- 对比区域 ---- */

@@ -81,3 +81,36 @@ INSERT IGNORE INTO campus_location (id, name, category, description, coordinate_
 (13, '学术报告厅',    '学术',   '图书馆五楼，可容纳500人，举办大型讲座和学术会议',                            0,       5),
 (14, '快递驿站',      '生活',   '位于第一食堂南侧，支持中通/圆通/韵达/顺丰等快递收发',                      80,     50),
 (15, '校园超市',      '生活',   '位于第一食堂一楼，经营日用百货/文具/零食/饮品',                             90,     60);
+
+-- --------------------------------------------
+-- 5. 维修员数据（阶段 9-1 新增）
+-- --------------------------------------------
+INSERT IGNORE INTO maintainer (id, name, phone, skill_category, status) VALUES
+(1, '张师傅', '13800138001', '水电', 'AVAILABLE'),
+(2, '李师傅', '13800138002', '网络', 'AVAILABLE'),
+(3, '王师傅', '13800138003', '木工', 'BUSY');
+
+-- --------------------------------------------
+-- 6. 报修单示例数据（阶段 9-1 新增）
+-- --------------------------------------------
+INSERT IGNORE INTO repair_order (id, order_no, user_id, title, description, location, urgency_level, status, created_by, assigned_to, assigned_time, completed_time) VALUES
+(1, 'REP2026061510455284', 1, '图书馆三楼空调不制冷',
+ '图书馆三楼自习区中央空调出风口无冷风，室温超过32度，影响学生自习。',
+ '图书馆三楼自习区', 'HIGH', 'COMPLETED',
+ 'admin', 1, '2026-06-10 09:30:00', '2026-06-10 14:00:00'),
+(2, 'REP2026061510451937', 1, '宿舍1号楼502室水龙头漏水',
+ '宿舍1号楼502室卫生间洗手台水龙头持续漏水，地面积水严重，存在安全隐患。',
+ '学生宿舍1号楼502室', 'URGENT', 'PENDING',
+ 'admin', NULL, NULL, NULL);
+
+-- --------------------------------------------
+-- 7. 报修评价数据（阶段 9-1 新增）
+-- --------------------------------------------
+INSERT IGNORE INTO repair_review (id, order_id, user_id, rating, comment) VALUES
+(1, 1, 1, 5, '张师傅响应迅速，维修技术专业，半小时就修好了空调，制冷效果很好！');
+
+-- --------------------------------------------
+-- 8. 派单记录数据（阶段 9-1 新增）
+-- --------------------------------------------
+INSERT IGNORE INTO dispatch_log (id, order_id, maintainer_id, dispatch_time, accept_time, complete_time, status) VALUES
+(1, 1, 1, '2026-06-10 09:30:00', '2026-06-10 09:45:00', '2026-06-10 14:00:00', 'COMPLETED');

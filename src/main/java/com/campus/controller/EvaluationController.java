@@ -2,6 +2,8 @@ package com.campus.controller;
 
 import com.campus.dto.R;
 import com.campus.service.RagEvaluationService;
+import com.campus.service.RepairService;
+import com.campus.vo.RepairStatsVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -9,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -23,9 +26,12 @@ public class EvaluationController {
     private static final Logger log = LoggerFactory.getLogger(EvaluationController.class);
 
     private final RagEvaluationService ragEvaluationService;
+    private final RepairService repairService;
 
-    public EvaluationController(RagEvaluationService ragEvaluationService) {
+    public EvaluationController(RagEvaluationService ragEvaluationService,
+                                RepairService repairService) {
         this.ragEvaluationService = ragEvaluationService;
+        this.repairService = repairService;
     }
 
     /**
@@ -63,5 +69,51 @@ public class EvaluationController {
         log.debug("收到 RAG 统计查询请求");
         Map<String, Object> stats = ragEvaluationService.getStats();
         return R.ok(stats);
+    }
+
+    /**
+     * 获取报修模块评估统计数据
+     * 返回总报修数、平均响应时间、满意度、各类别占比等
+     */
+    @GetMapping("/repair-stats")
+    @Operation(summary = "报修模块评估数据",
+            description = "返回报修模块的完整评估数据：总报修数、待处理/已完成数、"
+                    + "平均评分、平均响应时间（分钟）、完成率。供前端评估面板图表使用。")
+    public R<Map<String, Object>> repairStats() {
+        log.debug("收到报修评估统计查询请求");
+        RepairStatsVO stats = repairService.getStats();
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("totalOrders", stats.getTotalOrders());
+        result.put("pendingCount", stats.getPendingCount());
+        result.put("completedCount", stats.getCompletedCount());
+        result.put("avgRating", stats.getAvgRating());
+        result.put("avgResponseTimeMinutes", stats.getAvgResponseTime());
+        result.put("completionRate", stats.getTotalOrders() > 0
+                ? Math.round(stats.getCompletedCount() * 100.0 / stats.getTotalOrders()) : 0);
+
+        return R.ok(result);
+    }
+
+    @GetMapping("/repair-stats/trend")
+    @Operation(summary = "报修趋势数据",
+            description = "返回近N天每天的报修数量，供折线图使用。默认30天。")
+    public R<?> repairTrend(
+            @Parameter(description = "统计天数") @RequestParam(defaultValue = "30") int days) {
+        return R.ok(repairService.getTrend(days));
+    }
+
+    @GetMapping("/repair-stats/status-distribution")
+    @Operation(summary = "报修状态分布",
+            description = "返回各状态的报修单数量（PENDING/ASSIGNED/REPAIRING/COMPLETED/CANCELLED）")
+    public R<?> repairStatusDistribution() {
+        return R.ok(repairService.getStatusDistribution());
+    }
+
+    @GetMapping("/repair-stats/urgency-distribution")
+    @Operation(summary = "报修紧急程度分布",
+            description = "返回各紧急程度的报修单数量（URGENT/HIGH/NORMAL/LOW）")
+    public R<?> repairUrgencyDistribution() {
+        return R.ok(repairService.getUrgencyDistribution());
     }
 }

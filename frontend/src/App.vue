@@ -7,6 +7,9 @@
       <router-link to="/solver" class="nav-item" active-class="nav-active">
         <span>📝 问题求解</span>
       </router-link>
+      <router-link to="/repair" class="nav-item" active-class="nav-active">
+        <span>🛠️ 校园报修</span>
+      </router-link>
       <router-link to="/eval" class="nav-item" active-class="nav-active">
         <span>📊 评估对比</span>
       </router-link>

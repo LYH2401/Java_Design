@@ -5,8 +5,9 @@ import SolverView from '../views/SolverView.vue'
 
 const routes = [
   { path: '/', name: 'chat', component: ChatView },
-  { path: '/eval', name: 'eval', component: EvalView },
   { path: '/solver', name: 'solver', component: SolverView },
+  { path: '/repair', name: 'repair', component: () => import('../views/RepairView.vue') },
+  { path: '/eval', name: 'eval', component: EvalView },
 ]
 
 const router = createRouter({

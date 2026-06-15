@@ -129,6 +129,72 @@ CREATE TABLE IF NOT EXISTS alert_log (
     INDEX idx_create_time (create_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='告警日志';
 
+-- 9. 维修员表（阶段 9-1 新增）
+CREATE TABLE IF NOT EXISTS maintainer (
+    id             BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '维修员ID',
+    user_id        BIGINT       DEFAULT NULL COMMENT '关联用户ID（可选）',
+    name           VARCHAR(64)  NOT NULL COMMENT '姓名',
+    phone          VARCHAR(20)  DEFAULT NULL COMMENT '联系电话',
+    skill_category VARCHAR(64)  DEFAULT NULL COMMENT '技能分类（水电/木工/网络/空调/其他）',
+    status         VARCHAR(16)  NOT NULL DEFAULT 'AVAILABLE' COMMENT '状态（AVAILABLE/BUSY/REST）',
+    create_time    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    INDEX idx_maintainer_status (status),
+    CONSTRAINT fk_maintainer_user FOREIGN KEY (user_id) REFERENCES sys_user(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='维修员';
+
+-- 10. 报修单主表（阶段 9-1 新增）
+CREATE TABLE IF NOT EXISTS repair_order (
+    id             BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '报修单ID',
+    order_no       VARCHAR(32)  NOT NULL COMMENT '报修单号（REP+年月日时分+4位随机数）',
+    user_id        BIGINT       NOT NULL COMMENT '报修用户ID',
+    title          VARCHAR(256) NOT NULL COMMENT '报修标题',
+    description    TEXT         DEFAULT NULL COMMENT '报修描述',
+    location       VARCHAR(256) DEFAULT NULL COMMENT '报修地点',
+    urgency_level  VARCHAR(16)  NOT NULL DEFAULT 'NORMAL' COMMENT '紧急程度（URGENT/HIGH/NORMAL/LOW）',
+    status         VARCHAR(32)  NOT NULL DEFAULT 'PENDING' COMMENT '状态（PENDING/ASSIGNED/REPAIRING/COMPLETED/CANCELLED）',
+    image_urls     JSON         DEFAULT NULL COMMENT '报修图片URL列表',
+    created_by     VARCHAR(64)  DEFAULT NULL COMMENT '报修人姓名（冗余）',
+    assigned_to    BIGINT       DEFAULT NULL COMMENT '指派维修员ID',
+    assigned_time  DATETIME     DEFAULT NULL COMMENT '派单时间',
+    completed_time DATETIME     DEFAULT NULL COMMENT '完成时间',
+    create_time    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time    DATETIME     DEFAULT NULL COMMENT '更新时间',
+    UNIQUE KEY uk_order_no (order_no),
+    INDEX idx_user_id (user_id),
+    INDEX idx_status (status),
+    INDEX idx_order_no (order_no),
+    CONSTRAINT fk_repair_order_user FOREIGN KEY (user_id) REFERENCES sys_user(id),
+    CONSTRAINT fk_repair_order_maintainer FOREIGN KEY (assigned_to) REFERENCES maintainer(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='报修单';
+
+-- 11. 派单记录表（阶段 9-1 新增）
+CREATE TABLE IF NOT EXISTS dispatch_log (
+    id             BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '派单记录ID',
+    order_id       BIGINT       NOT NULL COMMENT '报修单ID',
+    maintainer_id  BIGINT       NOT NULL COMMENT '维修员ID',
+    dispatch_time  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '派单时间',
+    accept_time    DATETIME     DEFAULT NULL COMMENT '接单时间',
+    complete_time  DATETIME     DEFAULT NULL COMMENT '完成时间',
+    reject_reason  VARCHAR(512) DEFAULT NULL COMMENT '拒单原因',
+    status         VARCHAR(32)  NOT NULL DEFAULT 'DISPATCHED' COMMENT '状态（DISPATCHED/ACCEPTED/REJECTED/COMPLETED）',
+    INDEX idx_order_id (order_id),
+    CONSTRAINT fk_dispatch_log_order FOREIGN KEY (order_id) REFERENCES repair_order(id),
+    CONSTRAINT fk_dispatch_log_maintainer FOREIGN KEY (maintainer_id) REFERENCES maintainer(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='派单记录';
+
+-- 12. 报修评价表（阶段 9-1 新增）
+CREATE TABLE IF NOT EXISTS repair_review (
+    id          BIGINT    NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '评价ID',
+    order_id    BIGINT    NOT NULL COMMENT '报修单ID',
+    user_id     BIGINT    NOT NULL COMMENT '评价用户ID',
+    rating      TINYINT   NOT NULL COMMENT '评分（1-5星）',
+    comment     TEXT      DEFAULT NULL COMMENT '评价内容',
+    create_time DATETIME  NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    UNIQUE KEY uk_order_id (order_id),
+    CONSTRAINT fk_repair_review_order FOREIGN KEY (order_id) REFERENCES repair_order(id),
+    CONSTRAINT fk_repair_review_user FOREIGN KEY (user_id) REFERENCES sys_user(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='报修评价';
+
 -- ============================================
 -- 二、初始数据（data）
 -- ============================================
@@ -198,3 +264,28 @@ INSERT IGNORE INTO campus_location (id, name, category, description, coordinate_
 (13, '学术报告厅',    '学术',   '图书馆五楼，可容纳500人，举办大型讲座和学术会议',                            0,       5),
 (14, '快递驿站',      '生活',   '位于第一食堂南侧，支持中通/圆通/韵达/顺丰等快递收发',                      80,     50),
 (15, '校园超市',      '生活',   '位于第一食堂一楼，经营日用百货/文具/零食/饮品',                             90,     60);
+
+-- 维修员数据（阶段 9-1 新增）
+INSERT IGNORE INTO maintainer (id, name, phone, skill_category, status) VALUES
+(1, '张师傅', '13800138001', '水电', 'AVAILABLE'),
+(2, '李师傅', '13800138002', '网络', 'AVAILABLE'),
+(3, '王师傅', '13800138003', '木工', 'BUSY');
+
+-- 报修单示例数据（阶段 9-1 新增）
+INSERT IGNORE INTO repair_order (id, order_no, user_id, title, description, location, urgency_level, status, created_by, assigned_to, assigned_time, completed_time) VALUES
+(1, 'REP2026061510455284', 1, '图书馆三楼空调不制冷',
+ '图书馆三楼自习区中央空调出风口无冷风，室温超过32度，影响学生自习。',
+ '图书馆三楼自习区', 'HIGH', 'COMPLETED',
+ 'admin', 1, '2026-06-10 09:30:00', '2026-06-10 14:00:00'),
+(2, 'REP2026061510451937', 1, '宿舍1号楼502室水龙头漏水',
+ '宿舍1号楼502室卫生间洗手台水龙头持续漏水，地面积水严重，存在安全隐患。',
+ '学生宿舍1号楼502室', 'URGENT', 'PENDING',
+ 'admin', NULL, NULL, NULL);
+
+-- 报修评价数据（阶段 9-1 新增）
+INSERT IGNORE INTO repair_review (id, order_id, user_id, rating, comment) VALUES
+(1, 1, 1, 5, '张师傅响应迅速，维修技术专业，半小时就修好了空调，制冷效果很好！');
+
+-- 派单记录数据（阶段 9-1 新增）
+INSERT IGNORE INTO dispatch_log (id, order_id, maintainer_id, dispatch_time, accept_time, complete_time, status) VALUES
+(1, 1, 1, '2026-06-10 09:30:00', '2026-06-10 09:45:00', '2026-06-10 14:00:00', 'COMPLETED');

@@ -110,6 +110,27 @@
           </div>
           <div class="msg-content">
             <div class="msg-text" v-html="renderMsg(msg)"></div>
+            <div v-if="getRepairConfirm(msg)" class="repair-confirm-card">
+              <div class="repair-confirm-header">🛠️ 报修确认</div>
+              <div class="repair-confirm-item" v-if="getRepairConfirm(msg).title">
+                <span class="repair-confirm-label">标题：</span>{{ getRepairConfirm(msg).title }}
+              </div>
+              <div class="repair-confirm-item" v-if="getRepairConfirm(msg).location">
+                <span class="repair-confirm-label">地点：</span>{{ getRepairConfirm(msg).location }}
+              </div>
+              <div class="repair-confirm-item" v-if="getRepairConfirm(msg).urgencyLevel">
+                <span class="repair-confirm-label">紧急程度：</span>
+                <el-tag :type="repairUrgencyTag(getRepairConfirm(msg).urgencyLevel)" size="small">
+                  {{ getRepairConfirm(msg).urgencyLevel }}
+                </el-tag>
+              </div>
+              <div class="repair-confirm-actions">
+                <el-button type="primary" size="small" @click="confirmRepair(msg)">
+                  确认提交
+                </el-button>
+                <el-button size="small" @click="cancelRepair()">取消</el-button>
+              </div>
+            </div>
             <div v-if="msg.sources && msg.sources.length" class="msg-sources">
               <span class="source-label">📚 参考来源：</span>
               <el-tag
@@ -139,6 +160,30 @@
 
       <!-- 底部输入区 -->
       <footer class="input-area">
+        <div class="input-top">
+          <div class="repair-chips">
+            <span class="chips-label">快捷报修：</span>
+            <el-tag
+              v-for="c in repairChips"
+              :key="c.label"
+              :type="c.type"
+              size="small"
+              class="repair-chip"
+              @click="sendMessage(c.prompt)"
+            >{{ c.icon }} {{ c.label }}</el-tag>
+          </div>
+          <div class="quick-questions-row">
+            <el-button
+              v-for="q in quickQuestions"
+              :key="q"
+              size="small"
+              round
+              plain
+              @click="sendMessage(q)"
+            >{{ q }}</el-button>
+          </div>
+        </div>
+        <div class="input-row">
         <el-input
           v-model="inputText"
           type="textarea"
@@ -156,6 +201,7 @@
         >
           <el-icon><Promotion /></el-icon>
         </el-button>
+        </div>
       </footer>
     </main>
   </div>
@@ -194,6 +240,13 @@ const quickQuestions = [
   '查一下课表',
   '校园卡怎么充值？',
   '从教学楼到食堂怎么走？'
+]
+
+const repairChips = [
+  { icon: '🏠', label: '宿舍报修', type: '', prompt: '我宿舍的水龙头漏水了，需要报修。' },
+  { icon: '💡', label: '电器维修', type: 'warning', prompt: '教室的灯坏了，需要维修。' },
+  { icon: '💧', label: '水电问题', type: '', prompt: '卫生间水管堵了，需要疏通。' },
+  { icon: '🌐', label: '网络故障', type: '', prompt: '宿舍网络一直掉线，需要报修。' }
 ]
 
 const currentConversationTitle = ref('')
@@ -422,6 +475,40 @@ function parseSources(meta) {
     if (obj.sources) return obj.sources
   } catch (_) {}
   return []
+}
+
+function getRepairConfirm(msg) {
+  if (!msg || !msg.content) return null
+  const match = msg.content.match(/\[REPAIR_CONFIRM\]([\s\S]*?)\[\/REPAIR_CONFIRM\]/)
+  if (!match) return null
+  const body = match[1]
+  const fields = {}
+  const lines = body.trim().split('\n')
+  for (const line of lines) {
+    const kv = line.match(/^(.+?)[：:]\s*(.+)$/)
+    if (kv) {
+      const key = kv[1].trim()
+      const val = kv[2].trim()
+      if (key.includes('标题')) fields.title = val
+      else if (key.includes('地点')) fields.location = val
+      else if (key.includes('描述')) fields.description = val
+      else if (key.includes('紧急')) fields.urgencyLevel = val
+    }
+  }
+  return Object.keys(fields).length > 0 ? fields : null
+}
+
+function repairUrgencyTag(level) {
+  const map = { '紧急': 'danger', 'URGENT': 'danger', '高': 'warning', 'HIGH': 'warning', '普通': '', 'NORMAL': '', '低': 'info', 'LOW': 'info' }
+  return map[level] || ''
+}
+
+function confirmRepair(msg) {
+  sendMessage('确认提交报修')
+}
+
+function cancelRepair() {
+  sendMessage('取消报修')
 }
 
 function scrollToBottom() {
@@ -729,16 +816,93 @@ function scrollToBottom() {
 /* ======== 底部输入 ======== */
 .input-area {
   display: flex;
-  align-items: flex-end;
-  gap: 10px;
-  padding: 14px 20px;
+  flex-direction: column;
+  padding: 10px 20px 14px;
   background: #fff;
   border-top: 1px solid #e4e7ed;
   flex-shrink: 0;
+  gap: 8px;
 }
 
-.input-area :deep(.el-textarea__inner) {
+.input-top {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.repair-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.chips-label {
+  font-size: 12px;
+  color: #909399;
+}
+
+.repair-chip {
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.repair-chip:hover {
+  opacity: 0.8;
+}
+
+.quick-questions-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.input-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.input-row :deep(.el-textarea__inner) {
   border-radius: 12px;
+}
+
+.input-row .el-button {
+  border-radius: 12px;
+  height: 40px;
+  width: 40px;
+}
+
+/* ======== 报修确认卡片 ======== */
+.repair-confirm-card {
+  margin-top: 10px;
+  border: 1px solid #e6a23c;
+  border-radius: 10px;
+  padding: 14px;
+  background: #fef9e7;
+}
+
+.repair-confirm-header {
+  font-weight: 600;
+  font-size: 14px;
+  color: #e6a23c;
+  margin-bottom: 10px;
+}
+
+.repair-confirm-item {
+  font-size: 13px;
+  color: #303133;
+  margin-bottom: 6px;
+}
+
+.repair-confirm-label {
+  color: #909399;
+}
+
+.repair-confirm-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
 }
 
 .input-area .el-button {
