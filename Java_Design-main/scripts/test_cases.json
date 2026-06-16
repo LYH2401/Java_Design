@@ -1,0 +1,442 @@
+[
+  {
+    "id": 1,
+    "category": "图书馆",
+    "question": "图书馆周末开放吗？",
+    "expected_answer": "图书馆周六周日开放时间为 9:00-21:00，主图书馆开放时间为周一至周日 7:00-22:30",
+    "key_points": ["周末", "周六周日", "9:00", "21:00", "7:00", "22:30"],
+    "relevant_doc": "图书馆使用须知.txt"
+  },
+  {
+    "id": 2,
+    "category": "图书馆",
+    "question": "考试周图书馆开到几点？",
+    "expected_answer": "考试周期间（第17-20周）延长至 23:30",
+    "key_points": ["考试周", "23:30", "延长"],
+    "relevant_doc": "图书馆使用须知.txt"
+  },
+  {
+    "id": 3,
+    "category": "图书馆",
+    "question": "本科生可以在图书馆借几本书？借多久？",
+    "expected_answer": "本科生最多可借阅10册，借期30天，可续借1次（续借期20天）",
+    "key_points": ["10册", "30天", "续借", "20天"],
+    "relevant_doc": "图书馆使用须知.txt"
+  },
+  {
+    "id": 4,
+    "category": "图书馆",
+    "question": "研究生借书期限是多少天？",
+    "expected_answer": "研究生最多可借阅20册，借期60天，可续借1次（续借期30天）",
+    "key_points": ["研究生", "20册", "60天", "续借", "30天"],
+    "relevant_doc": "图书馆使用须知.txt"
+  },
+  {
+    "id": 5,
+    "category": "图书馆",
+    "question": "图书馆的研讨室怎么预约？",
+    "expected_answer": "二楼至四楼设有12间研讨室，可容纳4-12人，需提前1天通过图书馆系统预约，每次使用限4小时",
+    "key_points": ["12间", "4-12人", "提前1天", "4小时"],
+    "relevant_doc": "图书馆使用须知.txt"
+  },
+  {
+    "id": 6,
+    "category": "图书馆",
+    "question": "丢了一本图书馆的书要赔多少钱？",
+    "expected_answer": "丢失图书需按原书定价3-5倍赔偿，或自行购买同版本正版图书赔偿",
+    "key_points": ["3-5倍", "赔偿", "同版本正版"],
+    "relevant_doc": "图书馆使用须知.txt"
+  },
+  {
+    "id": 7,
+    "category": "图书馆",
+    "question": "逾期还书怎么收费？",
+    "expected_answer": "逾期未还按每册每天0.1元收取滞纳金，单册上限20元",
+    "key_points": ["0.1元", "每天", "滞纳金", "上限20元"],
+    "relevant_doc": "图书馆使用须知.txt"
+  },
+  {
+    "id": 8,
+    "category": "图书馆",
+    "question": "图书馆有哪些电子资源？",
+    "expected_answer": "订购了中国知网（CNKI）、万方数据、Web of Science、IEEE Xplore、Elsevier ScienceDirect等60余个中外文数据库",
+    "key_points": ["中国知网", "CNKI", "万方", "Web of Science", "IEEE", "ScienceDirect", "60余个"],
+    "relevant_doc": "图书馆使用须知.txt"
+  },
+  {
+    "id": 9,
+    "category": "图书馆",
+    "question": "校外怎么访问图书馆电子资源？",
+    "expected_answer": "校外访问需通过学校VPN系统",
+    "key_points": ["校外", "VPN"],
+    "relevant_doc": "图书馆使用须知.txt"
+  },
+  {
+    "id": 10,
+    "category": "图书馆",
+    "question": "入馆需要带什么？",
+    "expected_answer": "读者须持本人校园卡刷卡入馆，校园卡仅限本人使用",
+    "key_points": ["校园卡", "刷卡", "本人"],
+    "relevant_doc": "图书馆使用须知.txt"
+  },
+  {
+    "id": 11,
+    "category": "图书馆",
+    "question": "图书馆占座的物品怎么处理？",
+    "expected_answer": "每日闭馆前30分钟，工作人员将清理占座物品，遗留物品统一存放于一楼失物招领处，保存期限为7天",
+    "key_points": ["闭馆前30分钟", "清理", "失物招领处", "7天"],
+    "relevant_doc": "图书馆使用须知.txt"
+  },
+  {
+    "id": 12,
+    "category": "图书馆",
+    "question": "图书馆服务热线是多少？",
+    "expected_answer": "图书馆服务热线：025-12345678",
+    "key_points": ["025-12345678"],
+    "relevant_doc": "图书馆使用须知.txt"
+  },
+  {
+    "id": 13,
+    "category": "奖学金",
+    "question": "国家奖学金是多少钱？",
+    "expected_answer": "国家奖学金8000元/年，学习成绩排名和综合考评成绩排名均位于前10%",
+    "key_points": ["8000元", "前10%"],
+    "relevant_doc": "奖学金申请指南.txt"
+  },
+  {
+    "id": 14,
+    "category": "奖学金",
+    "question": "国家励志奖学金和国家奖学金可以同时申请吗？",
+    "expected_answer": "同一学年内，国家奖学金和国家励志奖学金不可兼得",
+    "key_points": ["不可兼得", "同一学年"],
+    "relevant_doc": "奖学金申请指南.txt"
+  },
+  {
+    "id": 15,
+    "category": "奖学金",
+    "question": "申请奖学金需要准备哪些材料？",
+    "expected_answer": "通用材料包括奖学金申请表、上一学年成绩单、个人事迹材料（1500字以内）、获奖证书复印件、科研成果证明",
+    "key_points": ["申请表", "成绩单", "个人事迹材料", "1500字", "获奖证书", "科研成果"],
+    "relevant_doc": "奖学金申请指南.txt"
+  },
+  {
+    "id": 16,
+    "category": "奖学金",
+    "question": "奖学金什么时候申请？",
+    "expected_answer": "每年9月开学后第1-3周为奖学金集中申请期。第1周发布通知，第2周提交申请，第3周学院评审答辩，第4周公示",
+    "key_points": ["9月", "第1-3周", "集中申请"],
+    "relevant_doc": "奖学金申请指南.txt"
+  },
+  {
+    "id": 17,
+    "category": "奖学金",
+    "question": "奖学金申请系统网址是什么？",
+    "expected_answer": "校内奖学金系统网址：http://scholarship.university.edu.cn",
+    "key_points": ["scholarship.university.edu.cn"],
+    "relevant_doc": "奖学金申请指南.txt"
+  },
+  {
+    "id": 18,
+    "category": "奖学金",
+    "question": "校长奖学金多少钱？",
+    "expected_answer": "校长奖学金10000元/年",
+    "key_points": ["校长奖学金", "10000元"],
+    "relevant_doc": "奖学金申请指南.txt"
+  },
+  {
+    "id": 19,
+    "category": "奖学金",
+    "question": "学业优秀奖学金分几个等级？",
+    "expected_answer": "学业优秀奖学金分为一等3000元、二等2000元、三等1000元",
+    "key_points": ["一等3000元", "二等2000元", "三等1000元"],
+    "relevant_doc": "奖学金申请指南.txt"
+  },
+  {
+    "id": 20,
+    "category": "奖学金",
+    "question": "奖学金评审结果有异议怎么办？",
+    "expected_answer": "如对评审结果有异议，可在公示期内向学生工作处提出书面申诉",
+    "key_points": ["公示期", "学生工作处", "书面申诉"],
+    "relevant_doc": "奖学金申请指南.txt"
+  },
+  {
+    "id": 21,
+    "category": "奖学金",
+    "question": "奖学金一般什么时候到账？",
+    "expected_answer": "奖学金到账时间一般为每年11月底至12月初",
+    "key_points": ["11月底", "12月初", "到账"],
+    "relevant_doc": "奖学金申请指南.txt"
+  },
+  {
+    "id": 22,
+    "category": "奖学金",
+    "question": "弄虚作假申请奖学金会有什么后果？",
+    "expected_answer": "弄虚作假者一经查实，取消当学年所有评奖评优资格并视情节给予纪律处分",
+    "key_points": ["弄虚作假", "取消", "评奖评优", "纪律处分"],
+    "relevant_doc": "奖学金申请指南.txt"
+  },
+  {
+    "id": 23,
+    "category": "奖学金",
+    "question": "单项奖学金有哪些类型？",
+    "expected_answer": "创新创业、文体活动、社会工作等，每项500-2000元",
+    "key_points": ["创新创业", "文体活动", "社会工作", "500", "2000"],
+    "relevant_doc": "奖学金申请指南.txt"
+  },
+  {
+    "id": 24,
+    "category": "校园卡",
+    "question": "校园卡丢了怎么挂失？",
+    "expected_answer": "线上挂失（微信公众号或自助平台）、电话挂失（025-87654321）、自助机挂失、柜台挂失。挂失后卡片立即冻结",
+    "key_points": ["线上挂失", "电话挂失", "025-87654321", "自助机", "立即冻结"],
+    "relevant_doc": "校园卡办理与挂失.txt"
+  },
+  {
+    "id": 25,
+    "category": "校园卡",
+    "question": "校园卡补办要多少钱？在哪里补办？",
+    "expected_answer": "携带身份证和学生证到信息化建设管理处（行政楼B座1楼105室），缴纳工本费20元",
+    "key_points": ["信息化建设管理处", "行政楼B座1楼105室", "20元"],
+    "relevant_doc": "校园卡办理与挂失.txt"
+  },
+  {
+    "id": 26,
+    "category": "校园卡",
+    "question": "校园卡怎么充值？",
+    "expected_answer": "微信充值、支付宝充值、现金充值（各食堂一楼）、自助充值机",
+    "key_points": ["微信", "支付宝", "现金", "自助充值机", "圈存机"],
+    "relevant_doc": "校园卡办理与挂失.txt"
+  },
+  {
+    "id": 27,
+    "category": "校园卡",
+    "question": "校园卡每日最多充多少钱？",
+    "expected_answer": "单日充值上限为1000元",
+    "key_points": ["1000元", "充值上限"],
+    "relevant_doc": "校园卡办理与挂失.txt"
+  },
+  {
+    "id": 28,
+    "category": "校园卡",
+    "question": "校园卡消费限额是多少？",
+    "expected_answer": "单笔消费限额50元，单日消费限额200元，超出需输入消费密码（默认密码为身份证号后6位）",
+    "key_points": ["单笔50元", "单日200元", "消费密码", "身份证号后6位"],
+    "relevant_doc": "校园卡办理与挂失.txt"
+  },
+  {
+    "id": 29,
+    "category": "校园卡",
+    "question": "挂失后多久可以补办校园卡？",
+    "expected_answer": "挂失满24小时后方可申请补办",
+    "key_points": ["24小时", "补办"],
+    "relevant_doc": "校园卡办理与挂失.txt"
+  },
+  {
+    "id": 30,
+    "category": "校园卡",
+    "question": "信息化建设管理处在哪里？",
+    "expected_answer": "信息化建设管理处在行政楼B座1楼105室",
+    "key_points": ["行政楼B座", "1楼", "105室"],
+    "relevant_doc": "校园卡办理与挂失.txt"
+  },
+  {
+    "id": 31,
+    "category": "校园卡",
+    "question": "毕业生校园卡余额怎么处理？",
+    "expected_answer": "毕业生离校时校园卡余额可申请退款，或转为校友卡继续使用图书馆等部分功能",
+    "key_points": ["退款", "校友卡", "图书馆"],
+    "relevant_doc": "校园卡办理与挂失.txt"
+  },
+  {
+    "id": 32,
+    "category": "校园卡",
+    "question": "校园卡有哪些功能？",
+    "expected_answer": "身份认证、食堂消费、图书借阅、门禁通行、水电缴费、校医院挂号、自助打印复印",
+    "key_points": ["身份认证", "食堂消费", "图书借阅", "门禁", "水电缴费", "校医院挂号"],
+    "relevant_doc": "校园卡办理与挂失.txt"
+  },
+  {
+    "id": 33,
+    "category": "校园卡",
+    "question": "捡到别人的校园卡应该交到哪里？",
+    "expected_answer": "捡到他人校园卡请交至信息化建设管理处或各食堂服务台",
+    "key_points": ["信息化建设管理处", "食堂服务台"],
+    "relevant_doc": "校园卡办理与挂失.txt"
+  },
+  {
+    "id": 34,
+    "category": "校园卡",
+    "question": "补办校园卡需要带什么证件？",
+    "expected_answer": "携带身份证和学生证到信息化建设管理处",
+    "key_points": ["身份证", "学生证"],
+    "relevant_doc": "校园卡办理与挂失.txt"
+  },
+  {
+    "id": 35,
+    "category": "校园导航",
+    "question": "从主校区到鼓楼校区怎么坐车？",
+    "expected_answer": "主校区与鼓楼校区之间设有往返班车，工作日7:00-21:00每30分钟一班，单程票价2元，主校区乘车点在行政楼南侧停车场",
+    "key_points": ["班车", "30分钟一班", "2元", "行政楼南侧停车场"],
+    "relevant_doc": "校园交通与导航.txt"
+  },
+  {
+    "id": 36,
+    "category": "校园导航",
+    "question": "学校有几个校区？面积多大？",
+    "expected_answer": "主校区约2800亩、鼓楼校区约800亩、浦口校区约600亩",
+    "key_points": ["主校区", "2800亩", "鼓楼校区", "800亩", "浦口校区", "600亩"],
+    "relevant_doc": "校园交通与导航.txt"
+  },
+  {
+    "id": 37,
+    "category": "校园导航",
+    "question": "最近的地铁站是哪个？",
+    "expected_answer": "主校区南门步行5分钟可达地铁2号线仙林中心站，鼓楼校区东门步行3分钟可达地铁1号线鼓楼站",
+    "key_points": ["2号线", "仙林中心站", "1号线", "鼓楼站", "5分钟", "3分钟"],
+    "relevant_doc": "校园交通与导航.txt"
+  },
+  {
+    "id": 38,
+    "category": "校园导航",
+    "question": "校内有哪些共享单车？",
+    "expected_answer": "校园内设有哈啰单车和美团单车停放点共30余处",
+    "key_points": ["哈啰单车", "美团单车", "30余处"],
+    "relevant_doc": "校园交通与导航.txt"
+  },
+  {
+    "id": 39,
+    "category": "校园导航",
+    "question": "校医院在哪里？门诊时间是什么？",
+    "expected_answer": "校医院位于生活区中部，第一食堂东侧50米。门诊时间8:00-17:30，急诊24小时值班",
+    "key_points": ["生活区中部", "第一食堂东侧50米", "8:00", "17:30", "24小时急诊"],
+    "relevant_doc": "校园交通与导航.txt"
+  },
+  {
+    "id": 40,
+    "category": "校园导航",
+    "question": "学校有几个食堂？都在哪里？",
+    "expected_answer": "第一食堂和第二食堂位于生活区南部，第三食堂（教工食堂）位于行政楼西侧，第四食堂（风味餐厅）位于生活区北部",
+    "key_points": ["第一食堂", "第二食堂", "第三食堂", "第四食堂", "教工食堂", "风味餐厅"],
+    "relevant_doc": "校园交通与导航.txt"
+  },
+  {
+    "id": 41,
+    "category": "校园导航",
+    "question": "校内停车怎么收费？",
+    "expected_answer": "教职工车辆年度停车证200元/年，学生车辆学期停车证100元/学期，外来车辆前2小时免费超出按2元/小时收费每日封顶20元",
+    "key_points": ["200元/年", "100元/学期", "2小时免费", "2元/小时", "20元封顶"],
+    "relevant_doc": "校园交通与导航.txt"
+  },
+  {
+    "id": 42,
+    "category": "校园导航",
+    "question": "体育馆在哪里？有哪些设施？",
+    "expected_answer": "综合体育馆位于校园西北角，含篮球馆、羽毛球馆、乒乓球馆、游泳馆和健身房",
+    "key_points": ["西北角", "篮球馆", "羽毛球馆", "乒乓球馆", "游泳馆", "健身房"],
+    "relevant_doc": "校园交通与导航.txt"
+  },
+  {
+    "id": 43,
+    "category": "校园导航",
+    "question": "校园电子地图在哪里查看？",
+    "expected_answer": "关注智慧校园微信公众号，点击校园导览可查看3D校园地图",
+    "key_points": ["智慧校园", "公众号", "校园导览", "3D"],
+    "relevant_doc": "校园交通与导航.txt"
+  },
+  {
+    "id": 44,
+    "category": "校园导航",
+    "question": "校园服务热线电话是多少？",
+    "expected_answer": "校园服务热线025-88888888",
+    "key_points": ["025-88888888"],
+    "relevant_doc": "校园交通与导航.txt"
+  },
+  {
+    "id": 45,
+    "category": "校园导航",
+    "question": "学生宿舍怎么分布？",
+    "expected_answer": "本科宿舍区集中在生活区南部（1-20号宿舍楼），研究生宿舍区位于生活区北部（21-30号宿舍楼）",
+    "key_points": ["本科", "生活区南部", "1-20号", "研究生", "生活区北部", "21-30号"],
+    "relevant_doc": "校园交通与导航.txt"
+  },
+  {
+    "id": 46,
+    "category": "教务",
+    "question": "本科生毕业需要修多少学分？",
+    "expected_answer": "本科生毕业需修满160-180学分，通识必修约40学分、学科基础约35学分、专业必修约35学分、专业选修约20学分、通识选修约10学分、实践教学约20学分",
+    "key_points": ["160-180学分", "通识必修", "40学分", "专业必修", "35学分", "通识选修", "10学分"],
+    "relevant_doc": "选课与学分管理.txt"
+  },
+  {
+    "id": 47,
+    "category": "教务",
+    "question": "每学期最多可以修多少学分？",
+    "expected_answer": "每学期修读学分上限为30学分，下限为15学分（毕业年级除外）",
+    "key_points": ["30学分", "上限", "15学分", "下限"],
+    "relevant_doc": "选课与学分管理.txt"
+  },
+  {
+    "id": 48,
+    "category": "教务",
+    "question": "选课分几个阶段？",
+    "expected_answer": "预选阶段（第16-17周）、正选阶段（第18周）、补退选阶段（下学期第1-2周）",
+    "key_points": ["预选", "第16-17周", "正选", "第18周", "补退选", "第1-2周"],
+    "relevant_doc": "选课与学分管理.txt"
+  },
+  {
+    "id": 49,
+    "category": "教务",
+    "question": "选课系统网址是什么？",
+    "expected_answer": "选课系统网址：http://course.university.edu.cn",
+    "key_points": ["course.university.edu.cn"],
+    "relevant_doc": "选课与学分管理.txt"
+  },
+  {
+    "id": 50,
+    "category": "教务",
+    "question": "如果考试不及格怎么办？",
+    "expected_answer": "课程成绩不及格需重修，必修课必须重修原课程，选修课可选择同类别其他课程替代。重修次数不限，成绩单标注重修",
+    "key_points": ["重修", "必修课", "原课程", "选修课", "同类别", "重修标注"],
+    "relevant_doc": "选课与学分管理.txt"
+  },
+  {
+    "id": 51,
+    "category": "教务",
+    "question": "什么情况会触发学业预警？",
+    "expected_answer": "当学期不及格学分超过8分、累计不及格学分超过15分、GPA低于2.0。预警等级分为黄色、橙色、红色三级",
+    "key_points": ["不及格学分超过8分", "累计15分", "GPA低于2.0", "黄色", "橙色", "红色"],
+    "relevant_doc": "选课与学分管理.txt"
+  },
+  {
+    "id": 52,
+    "category": "教务",
+    "question": "如何申请缓考？",
+    "expected_answer": "因故不能参加期末考试者，需在考前一周内向学院教务办提交缓考申请表并附证明材料如医院诊断书",
+    "key_points": ["考前一周", "缓考申请表", "证明材料", "医院诊断书"],
+    "relevant_doc": "选课与学分管理.txt"
+  },
+  {
+    "id": 53,
+    "category": "教务",
+    "question": "创新学分怎么获得？最高多少？",
+    "expected_answer": "参加学科竞赛获奖、发表学术论文、获得专利授权、参与教师科研项目等可申请创新学分，累计上限为4学分",
+    "key_points": ["学科竞赛", "学术论文", "专利授权", "科研项目", "4学分"],
+    "relevant_doc": "选课与学分管理.txt"
+  },
+  {
+    "id": 54,
+    "category": "教务",
+    "question": "可以选择其他学校的课程吗？",
+    "expected_answer": "每学期可选修1-2门联盟高校（C9高校联盟）在线课程，成绩合格后认定为本校通识选修课学分",
+    "key_points": ["1-2门", "C9高校联盟", "在线课程", "通识选修课"],
+    "relevant_doc": "选课与学分管理.txt"
+  },
+  {
+    "id": 55,
+    "category": "教务",
+    "question": "毕业前还有必修课没通过怎么办？",
+    "expected_answer": "毕业前仍未通过必修课者，按结业处理，可在离校后两年内回校重修换证",
+    "key_points": ["结业处理", "离校后两年", "重修换证"],
+    "relevant_doc": "选课与学分管理.txt"
+  }
+]
