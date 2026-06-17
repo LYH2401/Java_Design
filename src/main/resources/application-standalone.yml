@@ -23,8 +23,8 @@ spring:
   sql:
     init:
       mode: always
-      schema-locations: classpath:db/schema-h2.sql
-      data-locations: classpath:db/data-h2.sql
+      schema-locations: classpath:db/schema.sql
+      data-locations: classpath:db/data.sql
 
   # Spring AI OpenAI 配置
   ai:

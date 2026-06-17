@@ -6,7 +6,7 @@ DefaultDirName={autopf}\Campus Assistant
 DefaultGroupName=Campus Assistant
 OutputDir=E:\Desktop\installer
 OutputBaseFilename=CampusAssistantV0.0.2_Setup
-SetupIconFile=E:\Desktop\新建文件夹\Java 实验一\Java课设\校园智能服务小助手\installer-build\app\icon.ico
+SetupIconFile=E:\Desktop\新建文件夹\Java 实验一\Java课设\校园智能服务小助手\ico\favicon (1).ico
 Compression=lzma2/max
 SolidCompression=yes
 UninstallDisplayName=Campus Assistant
@@ -31,7 +31,9 @@ Name: "{autoprograms}\Campus Assistant\Uninstall Campus Assistant"; Filename: "{
 Name: "{autodesktop}\Campus Assistant"; Filename: "{sys}\wscript.exe"; Parameters: """{app}\launcher.vbs"""; WorkingDir: "{app}"; IconFilename: "{app}\icon.ico"; Comment: "Start Campus Assistant"
 
 [UninstallRun]
-Filename: "taskkill"; Parameters: "/F /IM javaw.exe"; Flags: runhidden; RunOnceId: killJava
+Filename: "taskkill"; Parameters: "/F /IM javaw.exe 2>nul"; Flags: runhidden; RunOnceId: killJavaw
+Filename: "taskkill"; Parameters: "/F /IM java.exe 2>nul"; Flags: runhidden; RunOnceId: killJava
+Filename: "{cmd}"; Parameters: "/c if exist ""%USERPROFILE%\.campus-assistant"" rmdir /s /q ""%USERPROFILE%\.campus-assistant"""; Flags: runhidden; RunOnceId: cleanData
 
 [Code]
 procedure CurStepChanged(CurStep: TSetupStep);
@@ -41,5 +43,6 @@ begin
   if CurStep = ssInstall then
   begin
     Exec('taskkill', '/F /IM javaw.exe', '', SW_HIDE, ewNoWait, ResultCode);
+    Exec('taskkill', '/F /IM java.exe', '', SW_HIDE, ewNoWait, ResultCode);
   end;
 end;

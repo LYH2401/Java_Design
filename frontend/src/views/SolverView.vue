@@ -273,6 +273,7 @@ async function sendMessage(text) {
 
   streaming.value = true
   streamContent.value = ''
+  const isNewConversation = messages.value.length === 1
 
   try {
     const apiConfig = getApiConfig()
@@ -320,6 +321,11 @@ async function sendMessage(text) {
 
     if (streamContent.value) {
       messages.value.push({ role: 'ASSISTANT', content: streamContent.value, sources: [] })
+    }
+    if (isNewConversation) {
+      await loadConversations()
+      const conv = conversations.value.find(c => c.id === currentConversationId.value)
+      if (conv) currentConversationTitle.value = conv.title || '新对话'
     }
   } catch (e) {
     ElMessage.error('请求失败: ' + e.message)

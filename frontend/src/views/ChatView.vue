@@ -367,6 +367,9 @@ async function sendMessage(text) {
   // 开始流式输出
   streaming.value = true
   streamContent.value = ''
+  toolCallingHint.value = ''
+  const isNewConversation = messages.value.length <= 1
+  await nextTick()
 
   const url = getStreamUrl()
   try {
@@ -430,6 +433,12 @@ async function sendMessage(text) {
         content: streamContent.value,
         sources: []
       })
+    }
+    // 新对话首条消息：刷新列表获取后端自动生成的标题
+    if (isNewConversation) {
+      await loadConversations()
+      const conv = conversations.value.find(c => c.id === currentConversationId.value)
+      if (conv) currentConversationTitle.value = conv.title || '新对话'
     }
   } catch (e) {
     ElMessage.error('请求失败: ' + e.message)
