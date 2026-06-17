@@ -221,6 +221,7 @@ function openApi() {
   showApiDialog.value = true
 }
 provide('openApiDialog', openApi)
+provide('clearApiConfig', clearApiConfig)
 
 onMounted(() => {
   loadApiConfig()

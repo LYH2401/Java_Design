@@ -20,6 +20,12 @@
           <div class="api-status">
             <el-tag type="success" size="small" effect="plain">API 已配置</el-tag>
             <span v-if="userModelName" class="api-model">{{ userModelName }}</span>
+            <el-button size="small" text type="primary" @click="openApiDialog?.()" title="修改配置">
+              <el-icon><EditPen /></el-icon>
+            </el-button>
+            <el-button size="small" text type="danger" @click="clearApiConfig?.()" title="删除配置">
+              <el-icon><Delete /></el-icon>
+            </el-button>
           </div>
         </template>
         <template v-else>
@@ -200,7 +206,7 @@
 
 <script setup>
 import { ref, nextTick, onMounted, onUnmounted, inject, computed } from 'vue'
-import { Plus, Delete, Fold, Expand, Promotion, Loading, UserFilled, Service } from '@element-plus/icons-vue'
+import { Plus, Delete, Fold, Expand, Promotion, Loading, UserFilled, Service, EditPen } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { getConversations, createConversation, getMessages, deleteConversation } from '../api/chat'
 import { renderMarkdown } from '../utils/markdown'
@@ -208,6 +214,7 @@ import { renderMarkdown } from '../utils/markdown'
 const apiForm = inject('apiConfig')
 const apiConfigured = inject('apiConfigured')
 const openApiDialog = inject('openApiDialog')
+const clearApiConfig = inject('clearApiConfig')
 
 function getApiConfig() {
   if (!apiConfigured || !apiConfigured.value || !apiForm) return null
@@ -613,7 +620,13 @@ function scrollToBottom() {
 .api-status {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.api-status .el-button {
+  padding: 2px 4px;
+  min-height: auto;
 }
 
 .api-model {
