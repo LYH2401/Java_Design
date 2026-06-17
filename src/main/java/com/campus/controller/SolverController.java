@@ -27,6 +27,7 @@ public class SolverController {
     private static final Logger log = LoggerFactory.getLogger(SolverController.class);
 
     private static final Long DEFAULT_USER_ID = 1L;
+    private static final String CONTEXT_SOLVER = "SOLVER";
 
     private final SolverService solverService;
     private final ConversationService conversationService;
@@ -46,10 +47,11 @@ public class SolverController {
     @PostMapping(value = "/solve", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> solve(@RequestBody ChatRequest request) {
         Long conversationId = getOrCreateConversationId(request);
+        request.setConversationId(conversationId);
         String model = request.getModel() != null ? request.getModel() : "dashscope";
         log.info("问题求解请求: conversationId={}, model={}, message={}", conversationId, model, request.getMessage());
 
-        return solverService.solveStream(conversationId, request.getMessage(), model)
+        return solverService.solveStream(request)
                 .timeout(Duration.ofSeconds(120))
                 .onErrorResume(e -> {
                     log.error("求解异常: {}", e.getMessage(), e);
@@ -59,14 +61,14 @@ public class SolverController {
 
     @GetMapping("/conversations")
     public R<List<Conversation>> listConversations() {
-        return R.ok(conversationService.listConversations(DEFAULT_USER_ID));
+        return R.ok(conversationService.listConversations(DEFAULT_USER_ID, CONTEXT_SOLVER));
     }
 
     @PostMapping("/conversations")
     public R<Conversation> createConversation(
             @RequestParam(required = false, defaultValue = "新问题") String firstMessage,
             @RequestParam(required = false, defaultValue = "NORMAL") String mode) {
-        Conversation conv = conversationService.createConversation(DEFAULT_USER_ID, firstMessage, mode);
+        Conversation conv = conversationService.createConversation(DEFAULT_USER_ID, firstMessage, mode, CONTEXT_SOLVER);
         return R.ok(conv);
     }
 
@@ -86,6 +88,6 @@ public class SolverController {
             return request.getConversationId();
         }
         String firstMsg = request.getMessage() != null ? request.getMessage() : "新问题";
-        return conversationService.createConversation(DEFAULT_USER_ID, firstMsg).getId();
+        return conversationService.createConversation(DEFAULT_USER_ID, firstMsg, "NORMAL", CONTEXT_SOLVER).getId();
     }
 }

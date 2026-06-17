@@ -1,5 +1,6 @@
 package com.campus.service;
 
+import com.campus.dto.ChatRequest;
 import reactor.core.publisher.Flux;
 
 /**
@@ -9,11 +10,14 @@ import reactor.core.publisher.Flux;
 public interface SolverService {
 
     /**
-     * 流式问题求解
-     * @param conversationId 会话 ID
-     * @param userMessage    用户问题
-     * @param model          模型选择（dashscope / deepseek）
+     * 流式问题求解（支持自定义 API 配置）
+     * @param request 包含 conversationId, message, model, apiKey, baseUrl
      * @return 流式 AI 回复
+     */
+    Flux<String> solveStream(ChatRequest request);
+
+    /**
+     * 流式问题求解（兼容旧接口）
      */
     Flux<String> solveStream(Long conversationId, String userMessage, String model);
 }

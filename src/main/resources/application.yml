@@ -4,19 +4,27 @@ server:
 spring:
   application:
     name: campus-assistant
+  main:
+    lazy-initialization: true
+    banner-mode: off
 
-  # MySQL 数据源
+  # H2 嵌入式数据库
   datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/campus_assistant?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-    username: root
-    password: ${MYSQL_ROOT_PASSWORD:campus123}
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:file:./data/campus_assistant;MODE=MySQL;DATABASE_TO_LOWER=TRUE;AUTO_SERVER=TRUE
+    username: sa
+    password:
     type: com.alibaba.druid.pool.DruidDataSource
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
 
   # SQL 初始化（首次启动建表）
   sql:
     init:
-      mode: always
+      mode: embedded
+      continue-on-error: true
       schema-locations: classpath:db/schema.sql
       data-locations: classpath:db/data.sql
 
@@ -52,11 +60,13 @@ mybatis-plus:
     db-config:
       id-type: auto
 
-# SpringDoc OpenAPI
+# SpringDoc OpenAPI（生产环境可关闭）
 springdoc:
   api-docs:
+    enabled: false
     path: /api-docs
   swagger-ui:
+    enabled: false
     path: /swagger-ui.html
 
 # 日志

@@ -37,6 +37,8 @@ public class ChatController {
     private static final Long DEFAULT_USER_ID = 1L;
     /** 默认消息分页大小 */
     private static final int DEFAULT_PAGE_SIZE = 50;
+    /** 会话上下文 */
+    private static final String CONTEXT_CHAT = "CHAT";
 
     public ChatController(ChatService chatService,
                           FallbackChatService fallbackChatService,
@@ -99,7 +101,7 @@ public class ChatController {
     @GetMapping("/conversations")
     @Operation(summary = "获取会话列表")
     public R<List<Conversation>> listConversations() {
-        List<Conversation> list = conversationService.listConversations(DEFAULT_USER_ID);
+        List<Conversation> list = conversationService.listConversations(DEFAULT_USER_ID, CONTEXT_CHAT);
         return R.ok(list);
     }
 
@@ -110,7 +112,7 @@ public class ChatController {
             @RequestParam(required = false, defaultValue = "新对话") String firstMessage,
             @Parameter(description = "会话模式：NORMAL（保留记录）/ INCOGNITO（无痕）")
             @RequestParam(required = false, defaultValue = "NORMAL") String mode) {
-        Conversation conv = conversationService.createConversation(DEFAULT_USER_ID, firstMessage, mode);
+        Conversation conv = conversationService.createConversation(DEFAULT_USER_ID, firstMessage, mode, CONTEXT_CHAT);
         return R.ok(conv);
     }
 
@@ -169,9 +171,8 @@ public class ChatController {
         if (request.getConversationId() != null) {
             return request.getConversationId();
         }
-        // 自动创建新会话（从首条消息生成标题）
         String firstMsg = request.getMessage() != null ? request.getMessage() : "新对话";
-        Conversation conv = conversationService.createConversation(DEFAULT_USER_ID, firstMsg);
+        Conversation conv = conversationService.createConversation(DEFAULT_USER_ID, firstMsg, "NORMAL", CONTEXT_CHAT);
         return conv.getId();
     }
 }

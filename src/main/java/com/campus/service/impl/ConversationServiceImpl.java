@@ -34,43 +34,53 @@ public class ConversationServiceImpl implements ConversationService {
     }
 
     @Override
-    public Conversation createConversation(Long userId, String firstMessage, String mode) {
+    public Conversation createConversation(Long userId, String firstMessage, String mode, String context) {
         String title = extractTitle(firstMessage);
 
         Conversation conv = new Conversation();
         conv.setUserId(userId);
         conv.setTitle(title);
         conv.setCreateTime(LocalDateTime.now());
-        // 使用 threadId 字段存储会话模式
+        conv.setContext(context != null ? context : "CHAT");
         boolean isIncognito = "INCOGNITO".equalsIgnoreCase(mode);
         conv.setThreadId(isIncognito ? "INCOGNITO" : null);
         conversationMapper.insert(conv);
 
-        log.info("创建会话: id={}, userId={}, title={}, mode={}", conv.getId(), userId, title, mode);
+        log.info("创建会话: id={}, userId={}, title={}, mode={}, context={}", conv.getId(), userId, title, mode, context);
         return conv;
     }
 
     @Override
+    public Conversation createConversation(Long userId, String firstMessage, String mode) {
+        return createConversation(userId, firstMessage, mode, "CHAT");
+    }
+
+    @Override
     public Conversation createConversation(Long userId, String firstMessage) {
-        return createConversation(userId, firstMessage, "NORMAL");
+        return createConversation(userId, firstMessage, "NORMAL", "CHAT");
     }
 
     @Override
     public List<Conversation> listConversations(Long userId) {
-        return conversationMapper.selectList(
-                new LambdaQueryWrapper<Conversation>()
-                        .eq(Conversation::getUserId, userId)
-                        .orderByDesc(Conversation::getCreateTime)
-        );
+        return listConversations(userId, null);
+    }
+
+    @Override
+    public List<Conversation> listConversations(Long userId, String context) {
+        LambdaQueryWrapper<Conversation> wrapper = new LambdaQueryWrapper<Conversation>()
+                .eq(Conversation::getUserId, userId)
+                .orderByDesc(Conversation::getCreateTime);
+        if (context != null && !context.isEmpty()) {
+            wrapper.eq(Conversation::getContext, context);
+        }
+        return conversationMapper.selectList(wrapper);
     }
 
     @Override
     @Transactional
     public void deleteConversation(Long conversationId) {
-        // 先删除关联消息
         messageMapper.delete(new LambdaQueryWrapper<Message>()
                 .eq(Message::getConversationId, conversationId));
-        // 再删除会话
         conversationMapper.deleteById(conversationId);
         log.info("删除会话及关联消息: conversationId={}", conversationId);
     }
@@ -78,7 +88,7 @@ public class ConversationServiceImpl implements ConversationService {
     @Override
     public List<Message> loadRecentRounds(Long conversationId, int maxRounds) {
         int rounds = maxRounds > 0 ? maxRounds : DEFAULT_MAX_ROUNDS;
-        int messageLimit = rounds * 2; // 每轮 = USER + ASSISTANT
+        int messageLimit = rounds * 2;
 
         List<Message> allMessages = messageMapper.selectList(
                 new LambdaQueryWrapper<Message>()
@@ -87,7 +97,6 @@ public class ConversationServiceImpl implements ConversationService {
                         .last("LIMIT " + messageLimit)
         );
 
-        // 查询结果按时间降序，需逆序返回
         List<Message> ordered = new ArrayList<>();
         for (int i = allMessages.size() - 1; i >= 0; i--) {
             ordered.add(allMessages.get(i));
@@ -115,7 +124,6 @@ public class ConversationServiceImpl implements ConversationService {
 
         int count = 0;
 
-        // 1. 清理过期会话
         List<Conversation> expired = conversationMapper.selectList(
                 new LambdaQueryWrapper<Conversation>()
                         .le(Conversation::getCreateTime, cutoff)
@@ -129,7 +137,6 @@ public class ConversationServiceImpl implements ConversationService {
             log.debug("清理过期会话: id={}", conv.getId());
         }
 
-        // 2. 清理所有无痕会话
         List<Conversation> incognitoSessions = conversationMapper.selectList(
                 new LambdaQueryWrapper<Conversation>()
                         .eq(Conversation::getThreadId, "INCOGNITO")
@@ -148,11 +155,6 @@ public class ConversationServiceImpl implements ConversationService {
         return count;
     }
 
-    // ==================== 私有方法 ====================
-
-    /**
-     * 从首条消息提取标题：去除空白，截取前 20 字，追加 "..."
-     */
     private String extractTitle(String firstMessage) {
         if (firstMessage == null || firstMessage.trim().isEmpty()) {
             return "新对话";

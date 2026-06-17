@@ -13,9 +13,6 @@ import java.io.IOException;
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
 
-    /**
-     * 开发环境 CORS 放行
-     */
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/api/**")
@@ -26,13 +23,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .maxAge(3600);
     }
 
-    /**
-     * SPA fallback：非 /api/** 路径转发到 index.html
-     * 支持 Vue Router history 模式
-     */
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // 静态资源从 classpath:/static/ 加载
         registry.addResourceHandler("/**")
                 .addResourceLocations("classpath:/static/")
                 .resourceChain(true)
@@ -40,11 +32,9 @@ public class WebMvcConfig implements WebMvcConfigurer {
                     @Override
                     protected Resource getResource(String resourcePath, Resource location) throws IOException {
                         Resource requestedResource = location.createRelative(resourcePath);
-                        // 如果请求的资源存在且可读，直接返回
                         if (requestedResource.exists() && requestedResource.isReadable()) {
                             return requestedResource;
                         }
-                        // 否则 fallback 到 index.html（SPA 路由）
                         return new ClassPathResource("/static/index.html");
                     }
                 });

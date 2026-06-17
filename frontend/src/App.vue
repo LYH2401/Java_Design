@@ -16,6 +16,25 @@
         </router-link>
       </div>
       <div class="nav-right">
+        <template v-if="campusToken">
+          <span class="user-name">{{ userName }}</span>
+          <el-button
+            size="small"
+            text
+            @click="handleLogout"
+            class="logout-btn"
+          >
+            退出
+          </el-button>
+          <el-button
+            :type="apiConfigured ? 'success' : 'warning'"
+            size="small"
+            @click="showApiDialog = true"
+            class="api-btn"
+          >
+            🔑 {{ apiConfigured ? 'API 已配置' : '配置 API Key' }}
+          </el-button>
+        </template>
         <el-button
           size="small"
           text
@@ -24,14 +43,6 @@
           :title="isDark ? '切换到亮色模式' : '切换到暗黑模式'"
         >
           {{ isDark ? '☀️' : '🌙' }}
-        </el-button>
-        <el-button
-          :type="apiConfigured ? 'success' : 'warning'"
-          size="small"
-          @click="showApiDialog = true"
-          class="api-btn"
-        >
-          🔑 {{ apiConfigured ? 'API 已配置' : '配置 API Key' }}
         </el-button>
       </div>
     </nav>
@@ -98,18 +109,46 @@
 </template>
 
 <script setup>
-import { ref, onMounted, provide, watch } from 'vue'
+import { ref, computed, onMounted, provide, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 
+const router = useRouter()
 const showApiDialog = ref(false)
 const apiConfigured = ref(false)
 const isDark = ref(false)
+const campusToken = ref(localStorage.getItem('campus_token'))
+const campusUser = ref(null)
 
-const apiForm = ref({
-  apiKey: '',
-  baseUrl: '',
-  model: ''
+const userName = computed(() => {
+  if (!campusUser.value) return ''
+  if (campusUser.value.username) return campusUser.value.username
+  if (campusUser.value.name) return campusUser.value.name
+  return '用户'
 })
+
+async function loadUserInfo() {
+  if (!campusToken.value) return
+  try {
+    const res = await fetch('/api/auth/me', {
+      headers: { 'Authorization': `Bearer ${campusToken.value}` }
+    })
+    if (!res.ok) throw new Error('获取用户信息失败')
+    const data = await res.json()
+    if (data?.data) {
+      campusUser.value = data.data
+      localStorage.setItem('campus_user', JSON.stringify(data.data))
+    }
+  } catch (_) {}
+}
+
+function handleLogout() {
+  localStorage.removeItem('campus_token')
+  localStorage.removeItem('campus_user')
+  campusToken.value = null
+  campusUser.value = null
+  router.push('/login')
+}
 
 function loadApiConfig() {
   const saved = localStorage.getItem('campus_api_config')
@@ -160,6 +199,15 @@ function loadDarkMode() {
   }
 }
 
+// Watch for token changes from other tabs or manual set
+watch(campusToken, (val) => {
+  if (!val) {
+    campusUser.value = null
+  } else {
+    loadUserInfo()
+  }
+})
+
 provide('apiConfig', apiForm)
 provide('apiConfigured', apiConfigured)
 provide('isDark', isDark)
@@ -171,6 +219,9 @@ provide('openApiDialog', openApi)
 onMounted(() => {
   loadApiConfig()
   loadDarkMode()
+  if (campusToken.value) {
+    loadUserInfo()
+  }
 })
 </script>
 
@@ -347,6 +398,24 @@ html, body, #app, #app-container {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.user-name {
+  font-size: 13px;
+  color: var(--text-secondary);
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logout-btn {
+  font-size: 12px !important;
+  color: var(--text-tertiary) !important;
+}
+
+.logout-btn:hover {
+  color: #f56c6c !important;
 }
 
 .dark-toggle {

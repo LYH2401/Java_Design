@@ -8,6 +8,15 @@ import java.util.List;
 public interface ConversationService {
 
     /**
+     * 创建新会话（指定模式和上下文）
+     * @param userId       用户 ID
+     * @param firstMessage 首条消息内容（用于生成标题）
+     * @param mode         会话模式：NORMAL（保留记录）/ INCOGNITO（无痕）
+     * @param context      会话上下文：CHAT / SOLVER
+     */
+    Conversation createConversation(Long userId, String firstMessage, String mode, String context);
+
+    /**
      * 创建新会话（指定模式）
      * @param userId       用户 ID
      * @param firstMessage 首条消息内容（用于生成标题）
@@ -24,6 +33,9 @@ public interface ConversationService {
 
     /** 获取用户的所有会话 */
     List<Conversation> listConversations(Long userId);
+
+    /** 获取用户指定上下文的会话 */
+    List<Conversation> listConversations(Long userId, String context);
 
     /** 删除会话 */
     void deleteConversation(Long conversationId);

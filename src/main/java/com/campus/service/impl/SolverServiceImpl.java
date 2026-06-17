@@ -1,5 +1,7 @@
 package com.campus.service.impl;
 
+import com.campus.config.DynamicChatClientFactory;
+import com.campus.dto.ChatRequest;
 import com.campus.entity.Message;
 import com.campus.repository.MessageMapper;
 import com.campus.service.ConversationService;
@@ -39,29 +41,46 @@ public class SolverServiceImpl implements SolverService {
 
     private final ChatClient chatClient;
     private final ChatClient deepseekChatClient;
+    private final DynamicChatClientFactory dynamicChatClientFactory;
     private final MessageMapper messageMapper;
     private final ConversationService conversationService;
 
     public SolverServiceImpl(
             @Qualifier("chatClient") ChatClient chatClient,
             @Qualifier("deepseekChatClient") ChatClient deepseekChatClient,
+            DynamicChatClientFactory dynamicChatClientFactory,
             MessageMapper messageMapper,
             ConversationService conversationService) {
         this.chatClient = chatClient;
         this.deepseekChatClient = deepseekChatClient;
+        this.dynamicChatClientFactory = dynamicChatClientFactory;
         this.messageMapper = messageMapper;
         this.conversationService = conversationService;
     }
 
     @Override
-    public Flux<String> solveStream(Long conversationId, String userMessage, String model) {
+    public Flux<String> solveStream(ChatRequest request) {
+        Long rawConversationId = request.getConversationId();
+        if (rawConversationId == null || rawConversationId <= 0) {
+            String firstMsg = request.getMessage() != null ? request.getMessage() : "新问题";
+            rawConversationId = conversationService.createConversation(1L, firstMsg).getId();
+        }
+        final Long conversationId = rawConversationId;
+        final String userMessage = request.getMessage();
+        final String model = request.getModel() != null ? request.getModel() : "dashscope";
+
         saveMessage(conversationId, "USER", userMessage);
 
         String historyContext = buildHistoryContext(conversationId);
-
         String prompt = buildSolverPrompt(historyContext, userMessage);
 
-        ChatClient client = "deepseek".equalsIgnoreCase(model) ? deepseekChatClient : chatClient;
+        ChatClient client;
+        if (request.hasCustomApiConfig()) {
+            client = dynamicChatClientFactory.createChatClient(
+                    request.getApiKey(), request.getBaseUrl(), model);
+        } else {
+            client = "deepseek".equalsIgnoreCase(model) ? deepseekChatClient : chatClient;
+        }
 
         StringBuilder fullResponse = new StringBuilder();
 
@@ -80,6 +99,11 @@ public class SolverServiceImpl implements SolverService {
                 .doOnError(e -> {
                     log.error("解题调用异常: conversationId={}", conversationId, e);
                 });
+    }
+
+    @Override
+    public Flux<String> solveStream(Long conversationId, String userMessage, String model) {
+        return solveStream(new ChatRequest(conversationId, userMessage, model));
     }
 
     /**

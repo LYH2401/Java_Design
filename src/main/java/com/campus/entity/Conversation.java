@@ -20,6 +20,9 @@ public class Conversation {
     @TableField("thread_id")
     private String threadId;
 
+    @TableField("context")
+    private String context;
+
     @TableField("title")
     private String title;
 
@@ -29,10 +32,11 @@ public class Conversation {
 
     public Conversation() {}
 
-    public Conversation(Long id, Long userId, String threadId, String title, LocalDateTime createTime) {
+    public Conversation(Long id, Long userId, String threadId, String context, String title, LocalDateTime createTime) {
         this.id = id;
         this.userId = userId;
         this.threadId = threadId;
+        this.context = context;
         this.title = title;
         this.createTime = createTime;
     }
@@ -45,6 +49,9 @@ public class Conversation {
 
     public String getThreadId() { return threadId; }
     public void setThreadId(String threadId) { this.threadId = threadId; }
+
+    public String getContext() { return context; }
+    public void setContext(String context) { this.context = context; }
 
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }

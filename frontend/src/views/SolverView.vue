@@ -9,23 +9,20 @@
         </el-button>
       </div>
 
-      <!-- 模型切换 -->
-      <div class="model-switch">
-        <el-select v-model="selectedModel" size="small" style="width: 100%">
-          <el-option label="通义千问 (DashScope)" value="dashscope" />
-          <el-option label="DeepSeek" value="deepseek" />
-        </el-select>
-      </div>
-
-      <!-- 隐私模式 -->
-      <div class="privacy-switch">
-        <el-switch
-          v-model="incognitoMode"
-          active-text="无痕"
-          inactive-text="普通"
-          size="small"
-          @change="onIncognitoChange"
-        />
+      <!-- API 配置区域 -->
+      <div class="api-section">
+        <template v-if="apiConfigured">
+          <div class="api-status">
+            <el-tag type="success" size="small" effect="plain">API 已配置</el-tag>
+            <span v-if="userModelName" class="api-model">{{ userModelName }}</span>
+          </div>
+        </template>
+        <template v-else>
+          <div class="api-setup-card" @click="openApiDialog?.()">
+            <span class="api-setup-icon">⚙️</span>
+            <span>配置 API Key 以开始使用</span>
+          </div>
+        </template>
       </div>
 
       <div class="conversation-list">
@@ -140,11 +137,31 @@
 </template>
 
 <script setup>
-import { ref, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, nextTick, onMounted, onUnmounted, inject, computed } from 'vue'
 import { Plus, Delete, Fold, Expand, Promotion, Loading, UserFilled, Service } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { getConversations, createConversation, getMessages, deleteConversation } from '../api/chat'
 import { renderMarkdown } from '../utils/markdown'
+
+const apiForm = inject('apiConfig')
+const apiConfigured = inject('apiConfigured')
+const openApiDialog = inject('openApiDialog')
+
+function getApiConfig() {
+  if (!apiConfigured || !apiConfigured.value || !apiForm) return null
+  const saved = localStorage.getItem('campus_api_config')
+  if (!saved) return null
+  try {
+    const config = JSON.parse(saved)
+    if (config.apiKey && config.baseUrl) return config
+  } catch (_) {}
+  return null
+}
+
+const userModelName = computed(() => {
+  const config = getApiConfig()
+  return config?.model || ''
+})
 
 // ---- 状态 ----
 const conversations = ref([])
@@ -156,7 +173,6 @@ const streaming = ref(false)
 const streamContent = ref('')
 const sidebarCollapsed = ref(false)
 const selectedModel = ref('dashscope')
-const incognitoMode = ref(false)
 
 const quickQuestions = [
   '解方程：2x² + 3x - 5 = 0',
@@ -201,8 +217,7 @@ async function loadConversations() {
 
 async function newConversation() {
   try {
-    const mode = incognitoMode.value ? 'INCOGNITO' : 'NORMAL'
-    const res = await fetch(`/api/solver/conversations?firstMessage=新问题&mode=${mode}`, { method: 'POST' })
+    const res = await fetch('/api/solver/conversations?firstMessage=新问题&mode=NORMAL', { method: 'POST' })
     const data = await res.json()
     const conv = data?.data
     if (!conv) {
@@ -219,9 +234,6 @@ async function newConversation() {
 async function switchConversation(conv) {
   if (!conv || !conv.id) return
   currentConversationId.value = conv.id
-  if (conv.conversationMode === 'INCOGNITO' || conv.threadId === 'INCOGNITO') {
-    incognitoMode.value = true
-  }
   try {
     const res = await fetch(`/api/solver/conversations/${conv.id}/messages`)
     const data = await res.json()
@@ -231,10 +243,6 @@ async function switchConversation(conv) {
   }
   await nextTick()
   scrollToBottom()
-}
-
-function onIncognitoChange() {
-  if (!currentConversationId.value) newConversation()
 }
 
 async function handleDeleteConversation(id) {
@@ -267,14 +275,20 @@ async function sendMessage(text) {
   streamContent.value = ''
 
   try {
+    const apiConfig = getApiConfig()
+    const body = {
+      conversationId: currentConversationId.value,
+      message: msg,
+      model: apiConfig ? (userModelName.value || '') : selectedModel.value
+    }
+    if (apiConfig) {
+      body.apiKey = apiConfig.apiKey
+      body.baseUrl = apiConfig.baseUrl
+    }
     const response = await fetch('/api/solver/solve', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        conversationId: currentConversationId.value,
-        message: msg,
-        model: selectedModel.value
-      })
+      body: JSON.stringify(body)
     })
 
     if (!response.ok) {
@@ -375,16 +389,45 @@ function scrollToBottom() {
   white-space: nowrap;
 }
 
-.model-switch {
+.api-section {
   padding: 10px 16px;
   border-bottom: 1px solid var(--border-light);
 }
 
-.privacy-switch {
-  padding: 8px 16px;
-  border-bottom: 1px solid var(--border-light);
+.api-setup-card {
   display: flex;
   align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: linear-gradient(135deg, var(--api-card-bg-start), var(--api-card-bg-end));
+  border: 1px dashed var(--api-card-border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.api-setup-card:hover {
+  background: linear-gradient(135deg, var(--api-card-hover-bg-start), var(--api-card-hover-bg-end));
+  border-color: var(--api-card-hover-border);
+}
+
+.api-setup-icon { font-size: 18px; flex-shrink: 0; }
+
+.api-setup-card > span:last-child {
+  font-size: 13px;
+  color: var(--api-card-text);
+  font-weight: 500;
+}
+
+.api-status { display: flex; align-items: center; gap: 8px; }
+
+.api-model {
+  font-size: 12px;
+  color: #67c23a;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .conversation-list { flex: 1; overflow-y: auto; padding: 8px; }
