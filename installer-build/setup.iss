@@ -22,17 +22,17 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [Files]
 Source: "E:\Desktop\新建文件夹\Java 实验一\Java课设\校园智能服务小助手\installer-build\app\runtime\*"; DestDir: "{app}\runtime"; Flags: ignoreversion recursesubdirs
 Source: "E:\Desktop\新建文件夹\Java 实验一\Java课设\校园智能服务小助手\installer-build\app\campus-assistant.jar"; DestDir: "{app}"; Flags: ignoreversion
-Source: "E:\Desktop\新建文件夹\Java 实验一\Java课设\校园智能服务小助手\installer-build\app\launcher.vbs"; DestDir: "{app}"; Flags: ignoreversion
+Source: "E:\Desktop\新建文件夹\Java 实验一\Java课设\校园智能服务小助手\installer-build\app\launcher.bat"; DestDir: "{app}"; Flags: ignoreversion
 Source: "E:\Desktop\新建文件夹\Java 实验一\Java课设\校园智能服务小助手\installer-build\app\icon.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{autoprograms}\Campus Assistant\Campus Assistant"; Filename: "{sys}\wscript.exe"; Parameters: """{app}\launcher.vbs"""; WorkingDir: "{app}"; IconFilename: "{app}\icon.ico"; Comment: "Start Campus Assistant"
+Name: "{autoprograms}\Campus Assistant\Campus Assistant"; Filename: "{app}\launcher.bat"; WorkingDir: "{app}"; IconFilename: "{app}\icon.ico"; Comment: "Start Campus Assistant"
 Name: "{autoprograms}\Campus Assistant\Uninstall Campus Assistant"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\Campus Assistant"; Filename: "{sys}\wscript.exe"; Parameters: """{app}\launcher.vbs"""; WorkingDir: "{app}"; IconFilename: "{app}\icon.ico"; Comment: "Start Campus Assistant"
+Name: "{autodesktop}\Campus Assistant"; Filename: "{app}\launcher.bat"; WorkingDir: "{app}"; IconFilename: "{app}\icon.ico"; Comment: "Start Campus Assistant"
 
 [UninstallRun]
-Filename: "taskkill"; Parameters: "/F /IM javaw.exe 2>nul"; Flags: runhidden; RunOnceId: killJavaw
-Filename: "taskkill"; Parameters: "/F /IM java.exe 2>nul"; Flags: runhidden; RunOnceId: killJava
+Filename: "taskkill"; Parameters: "/F /IM javaw.exe"; Flags: runhidden; RunOnceId: killJavaw
+Filename: "taskkill"; Parameters: "/F /IM java.exe"; Flags: runhidden; RunOnceId: killJava
 Filename: "{cmd}"; Parameters: "/c if exist ""%USERPROFILE%\.campus-assistant"" rmdir /s /q ""%USERPROFILE%\.campus-assistant"""; Flags: runhidden; RunOnceId: cleanData
 
 [Code]
