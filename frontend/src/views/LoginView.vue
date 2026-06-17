@@ -72,7 +72,11 @@ async function handleLogin() {
   loading.value = true
   try {
     const res = await login({ account: form.account, password: form.password })
-    const token = res.data?.token || res.token
+    const token = res && res.data
+    if (!token) {
+      ElMessage.error('登录失败：未获取到token')
+      return
+    }
     localStorage.setItem('campus_token', token)
     localStorage.removeItem('campus_user')
     ElMessage.success('登录成功')

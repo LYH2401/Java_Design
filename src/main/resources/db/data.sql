@@ -6,8 +6,7 @@
 -- 1. 管理员用户（admin / admin123）
 -- BCrypt 加密，10 轮
 -- --------------------------------------------
-MERGE INTO sys_user (id, username, password, role) KEY(id) VALUES
-(1, 'admin', '$2a$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPQga4X8y', 'ADMIN');
+-- 管理员用户由 DataInitializer.java 在启动时自动创建
 
 -- --------------------------------------------
 -- 2. 校园知识文档

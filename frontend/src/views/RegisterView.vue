@@ -140,7 +140,8 @@ async function handleRegister() {
       username: form.username,
       phone: form.phone,
       email: form.email,
-      password: form.password
+      password: form.password,
+      confirmPassword: form.confirmPassword
     })
     ElMessage.success('注册成功，请登录')
     router.push('/login')

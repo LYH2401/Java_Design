@@ -14,7 +14,12 @@ api.interceptors.request.use(config => {
 })
 
 api.interceptors.response.use(
-  res => res.data,
+  res => {
+    if (res.data && res.data.code && res.data.code >= 400) {
+      return Promise.reject(new Error(res.data.message || '请求失败'))
+    }
+    return res.data
+  },
   err => {
     if (err.response?.status === 401) {
       localStorage.removeItem('campus_token')

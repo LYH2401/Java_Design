@@ -5,32 +5,35 @@ AppDir = FSO.GetParentFolderName(WScript.ScriptFullName)
 JavaExe = AppDir & "\runtime\bin\javaw.exe"
 JarFile = AppDir & "\campus-assistant.jar"
 
-JavaOpts = "--add-opens java.base/java.lang=ALL-UNNAMED " & _
-           "--add-opens java.base/java.util=ALL-UNNAMED " & _
-           "--add-opens java.base/java.lang.reflect=ALL-UNNAMED " & _
-           "--add-opens java.base/java.text=ALL-UNNAMED " & _
-           "--add-opens java.base/java.time=ALL-UNNAMED " & _
-           "-Dspring.profiles.active=standalone"
-
-Cmd = """" & JavaExe & """ " & JavaOpts & " -jar """ & JarFile & """"
-WshShell.Run Cmd, 0, False
-
-Const MaxWait = 180
-For i = 1 To MaxWait
-    WScript.Sleep 1000
+Function IsServerRunning()
     On Error Resume Next
     Set Http = CreateObject("MSXML2.ServerXMLHTTP")
     Http.SetTimeouts 2000, 2000, 2000, 2000
     Http.Open "GET", "http://localhost:8080/", False
-    Http.SetRequestHeader "Accept", "text/html"
     Http.Send
-    StatusCode = Http.Status
-    Http.Close
-    If StatusCode > 0 Then
-        On Error GoTo 0
-        Exit For
+    If Http.Status >= 200 And Http.Status < 500 Then
+        IsServerRunning = True
+    Else
+        IsServerRunning = False
     End If
+    Http.Close
     On Error GoTo 0
-Next
+End Function
+
+If Not IsServerRunning() Then
+    JavaArgs = "--add-opens java.base/java.lang=ALL-UNNAMED " & _
+               "--add-opens java.base/java.util=ALL-UNNAMED " & _
+               "--add-opens java.base/java.lang.reflect=ALL-UNNAMED " & _
+               "--add-opens java.base/java.text=ALL-UNNAMED " & _
+               "--add-opens java.base/java.time=ALL-UNNAMED " & _
+               "-Dspring.profiles.active=standalone " & _
+               "-jar """ & JarFile & """"
+    WshShell.Run """" & JavaExe & """ " & JavaArgs, 0, False
+    WScript.Sleep 3000
+    For i = 1 To 30
+        If IsServerRunning() Then Exit For
+        WScript.Sleep 2000
+    Next
+End If
 
 WshShell.Run "http://localhost:8080"

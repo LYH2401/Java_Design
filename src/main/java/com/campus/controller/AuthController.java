@@ -38,11 +38,9 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public R<Map<String, Object>> login(@RequestBody LoginRequest req) {
+    public R<String> login(@RequestBody LoginRequest req) {
         String token = userService.login(req.getAccount(), req.getPassword());
-        Map<String, Object> data = new LinkedHashMap<>();
-        data.put("token", token);
-        return R.ok("登录成功", data);
+        return R.ok(token);
     }
 
     @GetMapping("/me")
@@ -65,6 +63,6 @@ public class AuthController {
             return R.fail(400, "请输入密码");
         }
         userService.deleteAccount(password);
-        return R.ok("账户已注销");
+        return R.<Void>ok("账户已注销", null);
     }
 }

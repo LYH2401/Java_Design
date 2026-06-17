@@ -5,7 +5,6 @@ spring:
   application:
     name: campus-assistant
   main:
-    lazy-initialization: true
     banner-mode: off
 
   # H2 嵌入式数据库
@@ -23,7 +22,7 @@ spring:
   # SQL 初始化（首次启动建表）
   sql:
     init:
-      mode: embedded
+      mode: always
       continue-on-error: true
       schema-locations: classpath:db/schema.sql
       data-locations: classpath:db/data.sql

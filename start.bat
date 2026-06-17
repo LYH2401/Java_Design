@@ -29,26 +29,24 @@ echo   Direct Start Mode
 echo ========================================
 echo.
 echo [Prerequisites] Please ensure:
-echo   1. MySQL 8.0 is running locally (port 3306)
-echo   2. JDK 17+ is installed (auto-detected below)
-echo   3. Database 'campus_assistant' is created
-echo   4. Maven is installed (if JAR needs rebuild)
+echo   1. JDK 17+ is installed (auto-detected below)
+echo   2. Maven is installed (if JAR needs rebuild)
 echo.
 
 :: ============================================================
 :: STEP 1 - Load environment from .env file (optional)
 :: ============================================================
 echo [STEP 1] Loading .env (optional)...
+echo   (API keys can be configured in the web UI)
+echo.
 
 if exist .env (
-    :: Parse .env file (key=value, skip comments and blank lines)
     for /f "usebackq tokens=1,* delims==" %%a in (".env") do (
         set "key=%%a"
         set "val=%%b"
         if not "!key!"=="" (
             if not "!key:~0,1!"=="#" (
                 for /f "tokens=1" %%v in ("!val!") do set "val_clean=%%v"
-                if "!key!"=="MYSQL_ROOT_PASSWORD" set "MYSQL_PASS=!val_clean!"
                 if "!key!"=="AI_DASHSCOPE_API_KEY" set "DASHSCOPE_KEY=!val_clean!"
                 if "!key!"=="DEEPSEEK_API" set "DEEPSEEK_KEY=!val_clean!"
             )
@@ -56,18 +54,11 @@ if exist .env (
     )
     echo [OK]   .env loaded
 ) else (
-    echo [INFO] .env not found (API keys can be configured in the web UI)
-)
-
-if "%MYSQL_PASS%"=="" (
-    echo [WARN] MYSQL_ROOT_PASSWORD not found in .env, using default: campus123
-    set "MYSQL_PASS=campus123"
-) else (
-    echo [OK]   MYSQL_ROOT_PASSWORD = ****
+    echo [INFO] .env not found - API keys will be configured in the web UI
 )
 
 if "%DASHSCOPE_KEY%"=="" (
-    echo [WARN] AI_DASHSCOPE_API_KEY not set in .env - DashScope model will fail!
+    echo [INFO] AI_DASHSCOPE_API_KEY not set - configure in web UI
 ) else (
     echo [OK]   AI_DASHSCOPE_API_KEY = ****
 )
@@ -181,15 +172,13 @@ echo.
 echo [STEP 4] Starting application...
 echo.
 echo   URL:      http://localhost:8080
-echo   Swagger:  http://localhost:8080/swagger-ui.html
-echo   Log:      campus.log
 echo.
 echo   Press Ctrl+C in the terminal window to stop
 echo ========================================
 echo.
 
 :: Build Java options
-set "JAVA_OPTS=-Dspring.datasource.password=%MYSQL_PASS%"
+set "JAVA_OPTS="
 if not "%DASHSCOPE_KEY%"=="" set "JAVA_OPTS=%JAVA_OPTS% -DAI_DASHSCOPE_API_KEY=%DASHSCOPE_KEY%"
 if not "%DEEPSEEK_KEY%"=="" set "JAVA_OPTS=%JAVA_OPTS% -DDEEPSEEK_API=%DEEPSEEK_KEY%"
 

@@ -1,11 +1,10 @@
 -- ============================================
 -- 校园智能服务小助手 - 数据库建表脚本
--- H2 Embedded / MySQL Compatibility Mode
+-- H2 Embedded
 -- ============================================
 
--- --------------------------------------------
--- 1. 用户表
--- --------------------------------------------
+SET REFERENTIAL_INTEGRITY FALSE;
+
 CREATE TABLE IF NOT EXISTS sys_user (
     id          BIGINT          NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '用户ID',
     username    VARCHAR(64)     NOT NULL COMMENT '用户名',
@@ -27,8 +26,8 @@ CREATE TABLE IF NOT EXISTS conversation (
     context     VARCHAR(32)     DEFAULT 'CHAT' COMMENT '会话上下文：CHAT/SOLVER',
     title       VARCHAR(256)    DEFAULT NULL COMMENT '会话标题',
     create_time DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    INDEX idx_user_id (user_id),
-    INDEX idx_thread_id (thread_id),
+    INDEX idx_conv_user_id (user_id),
+    INDEX idx_conv_thread_id (thread_id),
     CONSTRAINT fk_conversation_user FOREIGN KEY (user_id) REFERENCES sys_user(id)
 );
 
@@ -42,8 +41,8 @@ CREATE TABLE IF NOT EXISTS message (
     content         TEXT        DEFAULT NULL COMMENT '消息内容',
     metadata        CLOB        DEFAULT NULL COMMENT '扩展元数据',
     create_time     DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    INDEX idx_conversation_id (conversation_id),
-    INDEX idx_create_time (create_time),
+    INDEX idx_msg_conversation_id (conversation_id),
+    INDEX idx_msg_create_time (create_time),
     CONSTRAINT fk_message_conversation FOREIGN KEY (conversation_id) REFERENCES conversation(id)
 );
 
@@ -57,8 +56,8 @@ CREATE TABLE IF NOT EXISTS knowledge_doc (
     content     TEXT            NOT NULL COMMENT '文档内容',
     vector_id   VARCHAR(128)    DEFAULT NULL COMMENT '向量存储ID',
     create_time DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    INDEX idx_category (category),
-    INDEX idx_vector_id (vector_id)
+    INDEX idx_kd_category (category),
+    INDEX idx_kd_vector_id (vector_id)
 );
 
 -- --------------------------------------------
@@ -75,9 +74,9 @@ CREATE TABLE IF NOT EXISTS agent_execution_log (
     final_response    TEXT         DEFAULT NULL COMMENT '最终回复',
     execution_time_ms INT          DEFAULT NULL COMMENT '执行耗时（毫秒）',
     create_time       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    INDEX idx_conversation_id (conversation_id),
-    INDEX idx_agent_intent (agent_intent),
-    INDEX idx_create_time (create_time)
+    INDEX idx_ael_conversation_id (conversation_id),
+    INDEX idx_ael_agent_intent (agent_intent),
+    INDEX idx_ael_create_time (create_time)
 );
 
 -- --------------------------------------------
@@ -104,8 +103,8 @@ CREATE TABLE IF NOT EXISTS alert_log (
     alert_type  VARCHAR(64)  NOT NULL COMMENT '告警类型',
     message     TEXT         DEFAULT NULL COMMENT '告警消息',
     create_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    INDEX idx_alert_type (alert_type),
-    INDEX idx_create_time (create_time)
+    INDEX idx_al_alert_type (alert_type),
+    INDEX idx_al_create_time (create_time)
 );
 
 -- --------------------------------------------
@@ -135,8 +134,8 @@ CREATE TABLE IF NOT EXISTS campus_location (
     description  TEXT         DEFAULT NULL COMMENT '地点描述',
     coordinate_x DOUBLE       DEFAULT 0 COMMENT 'X坐标（米）',
     coordinate_y DOUBLE       DEFAULT 0 COMMENT 'Y坐标（米）',
-    INDEX idx_category (category),
-    INDEX idx_name (name)
+    INDEX idx_cl_category (category),
+    INDEX idx_cl_name (name)
 );
 
 -- --------------------------------------------
@@ -150,7 +149,7 @@ CREATE TABLE IF NOT EXISTS maintainer (
     skill_category VARCHAR(64)  DEFAULT NULL COMMENT '技能分类（水电/木工/网络/空调/其他）',
     status         VARCHAR(16)  NOT NULL DEFAULT 'AVAILABLE' COMMENT '状态（AVAILABLE/BUSY/REST）',
     create_time    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    INDEX idx_maintainer_status (status),
+    INDEX idx_mt_status (status),
     CONSTRAINT fk_maintainer_user FOREIGN KEY (user_id) REFERENCES sys_user(id)
 );
 
@@ -174,9 +173,9 @@ CREATE TABLE IF NOT EXISTS repair_order (
     create_time    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time    DATETIME     DEFAULT NULL COMMENT '更新时间',
     UNIQUE (order_no),
-    INDEX idx_user_id (user_id),
-    INDEX idx_status (status),
-    INDEX idx_order_no (order_no),
+    INDEX idx_ro_user_id (user_id),
+    INDEX idx_ro_status (status),
+    INDEX idx_ro_order_no (order_no),
     CONSTRAINT fk_repair_order_user FOREIGN KEY (user_id) REFERENCES sys_user(id),
     CONSTRAINT fk_repair_order_maintainer FOREIGN KEY (assigned_to) REFERENCES maintainer(id)
 );
@@ -193,7 +192,7 @@ CREATE TABLE IF NOT EXISTS dispatch_log (
     complete_time  DATETIME     DEFAULT NULL COMMENT '完成时间',
     reject_reason  VARCHAR(512) DEFAULT NULL COMMENT '拒单原因',
     status         VARCHAR(32)  NOT NULL DEFAULT 'DISPATCHED' COMMENT '状态（DISPATCHED/ACCEPTED/REJECTED/COMPLETED）',
-    INDEX idx_order_id (order_id),
+    INDEX idx_dl_order_id (order_id),
     CONSTRAINT fk_dispatch_log_order FOREIGN KEY (order_id) REFERENCES repair_order(id),
     CONSTRAINT fk_dispatch_log_maintainer FOREIGN KEY (maintainer_id) REFERENCES maintainer(id)
 );
@@ -212,3 +211,5 @@ CREATE TABLE IF NOT EXISTS repair_review (
     CONSTRAINT fk_repair_review_order FOREIGN KEY (order_id) REFERENCES repair_order(id),
     CONSTRAINT fk_repair_review_user FOREIGN KEY (user_id) REFERENCES sys_user(id)
 );
+
+SET REFERENTIAL_INTEGRITY TRUE;

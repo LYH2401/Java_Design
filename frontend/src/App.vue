@@ -120,6 +120,12 @@ const isDark = ref(false)
 const campusToken = ref(localStorage.getItem('campus_token'))
 const campusUser = ref(null)
 
+const apiForm = ref({
+  apiKey: '',
+  baseUrl: '',
+  model: ''
+})
+
 const userName = computed(() => {
   if (!campusUser.value) return ''
   if (campusUser.value.username) return campusUser.value.username
