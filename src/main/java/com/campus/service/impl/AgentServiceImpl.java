@@ -1,5 +1,7 @@
 package com.campus.service.impl;
 
+import com.campus.config.DynamicChatClientFactory;
+import com.campus.dto.ChatRequest;
 import com.campus.entity.AgentExecutionLog;
 import com.campus.entity.Message;
 import com.campus.repository.AgentExecutionLogMapper;
@@ -40,6 +42,7 @@ public class AgentServiceImpl implements AgentService {
 
     private final ChatClient agentChatClient;
     private final ChatClient deepseekAgentChatClient;
+    private final DynamicChatClientFactory dynamicChatClientFactory;
     private final MessageMapper messageMapper;
     private final AgentExecutionLogMapper executionLogMapper;
     private final RagService ragService;
@@ -50,6 +53,7 @@ public class AgentServiceImpl implements AgentService {
     public AgentServiceImpl(
             @Qualifier("agentChatClient") ChatClient agentChatClient,
             @Qualifier("deepseekAgentChatClient") ChatClient deepseekAgentChatClient,
+            DynamicChatClientFactory dynamicChatClientFactory,
             MessageMapper messageMapper,
             AgentExecutionLogMapper executionLogMapper,
             RagService ragService,
@@ -58,6 +62,7 @@ public class AgentServiceImpl implements AgentService {
             ConversationService conversationService) {
         this.agentChatClient = agentChatClient;
         this.deepseekAgentChatClient = deepseekAgentChatClient;
+        this.dynamicChatClientFactory = dynamicChatClientFactory;
         this.messageMapper = messageMapper;
         this.executionLogMapper = executionLogMapper;
         this.ragService = ragService;
@@ -67,11 +72,23 @@ public class AgentServiceImpl implements AgentService {
     }
 
     @Override
-    public Flux<String> agentChat(Long conversationId, String userMessage, String model) {
-        // 根据模型选择对应的 ChatClient
-        ChatClient client = "deepseek".equalsIgnoreCase(model) ? deepseekAgentChatClient : agentChatClient;
+    public Flux<String> agentChat(ChatRequest request) {
+        Long rawConversationId = request.getConversationId();
+        if (rawConversationId == null || rawConversationId <= 0) {
+            rawConversationId = conversationService.createConversation(1L, "Agent 对话").getId();
+        }
+        final Long conversationId = rawConversationId;
+        final String userMessage = request.getMessage();
+        final String model = request.getModel() != null ? request.getModel() : "dashscope";
 
-        // 检查是否有待确认的操作需要处理
+        ChatClient client;
+        if (request.hasCustomApiConfig()) {
+            client = dynamicChatClientFactory.createAgentChatClient(
+                    request.getApiKey(), request.getBaseUrl(), model);
+        } else {
+            client = "deepseek".equalsIgnoreCase(model) ? deepseekAgentChatClient : agentChatClient;
+        }
+
         String confirmResult = hitlService.tryResolveConfirmation(conversationId, userMessage);
         if (confirmResult != null) {
             if (confirmResult.startsWith("CONFIRMED:")) {
@@ -93,23 +110,17 @@ public class AgentServiceImpl implements AgentService {
             }
         }
 
-        // 1. 保存用户消息（截断过长消息）
         String truncated = truncateMessage(userMessage);
         saveMessage(conversationId, "USER", truncated);
 
-        // 2. 清除上轮工具追踪记录
         toolTracker.clear();
 
         long startTime = System.currentTimeMillis();
         StringBuilder fullResponse = new StringBuilder();
 
-        // 3. 加载对话历史上下文
         String historyContext = buildHistoryContext(conversationId);
-
-        // 4. 构建带历史的 Prompt
         String prompt = buildAgentPrompt(historyContext, truncated);
 
-        // 5. 调用带 Tool 能力的 ChatClient（流式），工具自动选择与调用
         return client.prompt()
                 .user(prompt)
                 .stream()
@@ -117,13 +128,10 @@ public class AgentServiceImpl implements AgentService {
                 .doOnNext(fullResponse::append)
                 .doOnComplete(() -> {
                     String response = fullResponse.toString();
-                    // 6. 保存 AI 回复
                     saveMessage(conversationId, "ASSISTANT", response);
-                    // 7. 记录 Agent 执行日志（包含工具调用信息）
                     int elapsed = (int) (System.currentTimeMillis() - startTime);
                     saveExecutionLog(conversationId, userMessage, response, elapsed);
 
-                    // 8. 检测是否需要用户确认（Hitl）
                     if (hitlService.requiresConfirmation(response)) {
                         String actionDesc = hitlService.extractActionDescription(response);
                         if (actionDesc != null) {
@@ -131,7 +139,6 @@ public class AgentServiceImpl implements AgentService {
                             log.info("检测到需要确认的操作: conversationId={}, action={}", conversationId, actionDesc);
                         }
                     }
-                    // 9. 清除本轮工具追踪
                     toolTracker.clear();
                     log.info("Agent 对话完成: conversationId={}, model={}, 耗时={}ms, 工具调用次数={}",
                             conversationId, model, elapsed, toolTracker.getCallCount());
@@ -142,13 +149,31 @@ public class AgentServiceImpl implements AgentService {
                 });
     }
 
+    @Override
+    public Flux<String> agentChat(Long conversationId, String userMessage, String model) {
+        return agentChat(new ChatRequest(conversationId, userMessage, model));
+    }
+
     /**
      * Agent 对话 + RAG 知识增强
      * 先检索知识库，将检索到的文档作为上下文注入 Prompt，再由 Agent 决定是否调用工具
      */
-    public Flux<String> agentChatWithRag(Long conversationId, String userMessage, String model) {
-        // 根据模型选择对应的 ChatClient
-        ChatClient client = "deepseek".equalsIgnoreCase(model) ? deepseekAgentChatClient : agentChatClient;
+    public Flux<String> agentChatWithRag(ChatRequest request) {
+        Long rawConversationId = request.getConversationId();
+        if (rawConversationId == null || rawConversationId <= 0) {
+            rawConversationId = conversationService.createConversation(1L, "Agent 对话").getId();
+        }
+        final Long conversationId = rawConversationId;
+        final String userMessage = request.getMessage();
+        final String model = request.getModel() != null ? request.getModel() : "dashscope";
+
+        ChatClient client;
+        if (request.hasCustomApiConfig()) {
+            client = dynamicChatClientFactory.createAgentChatClient(
+                    request.getApiKey(), request.getBaseUrl(), model);
+        } else {
+            client = "deepseek".equalsIgnoreCase(model) ? deepseekAgentChatClient : agentChatClient;
+        }
 
         // 检查是否有待确认的操作需要处理
         String confirmResult = hitlService.tryResolveConfirmation(conversationId, userMessage);

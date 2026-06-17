@@ -1,5 +1,7 @@
 package com.campus.service.impl;
 
+import com.campus.config.DynamicChatClientFactory;
+import com.campus.dto.ChatRequest;
 import com.campus.entity.AlertLog;
 import com.campus.entity.KnowledgeDoc;
 import com.campus.entity.Message;
@@ -29,6 +31,7 @@ public class ChatServiceImpl implements ChatService {
 
     private final ChatClient chatClient;
     private final ChatClient deepseekChatClient;
+    private final DynamicChatClientFactory dynamicChatClientFactory;
     private final MessageMapper messageMapper;
     private final AlertLogMapper alertLogMapper;
     private final KnowledgeService knowledgeService;
@@ -36,12 +39,14 @@ public class ChatServiceImpl implements ChatService {
 
     public ChatServiceImpl(ChatClient chatClient,
                            @org.springframework.beans.factory.annotation.Qualifier("deepseekChatClient") ChatClient deepseekChatClient,
+                           DynamicChatClientFactory dynamicChatClientFactory,
                            MessageMapper messageMapper,
                            AlertLogMapper alertLogMapper,
                            KnowledgeService knowledgeService,
                            ConversationService conversationService) {
         this.chatClient = chatClient;
         this.deepseekChatClient = deepseekChatClient;
+        this.dynamicChatClientFactory = dynamicChatClientFactory;
         this.messageMapper = messageMapper;
         this.alertLogMapper = alertLogMapper;
         this.knowledgeService = knowledgeService;
@@ -49,7 +54,15 @@ public class ChatServiceImpl implements ChatService {
     }
 
     @Override
-    public Flux<String> chatStream(Long conversationId, String userMessage, String model) {
+    public Flux<String> chatStream(ChatRequest request) {
+        Long rawConversationId = request.getConversationId();
+        if (rawConversationId == null) {
+            rawConversationId = conversationService.createConversation(1L, "新对话").getId();
+        }
+        final Long conversationId = rawConversationId;
+        final String userMessage = request.getMessage();
+        final String model = request.getModel() != null ? request.getModel() : "dashscope";
+
         // 1. 保存用户消息
         saveMessage(conversationId, "USER", userMessage);
 
@@ -62,8 +75,14 @@ public class ChatServiceImpl implements ChatService {
         // 4. 构建完整 Prompt
         String prompt = buildPrompt(historyContext, userMessage);
 
-        // 5. 选择模型
-        ChatClient client = "deepseek".equalsIgnoreCase(model) ? deepseekChatClient : chatClient;
+        // 5. 选择或动态创建 ChatClient
+        ChatClient client;
+        if (request.hasCustomApiConfig()) {
+            client = dynamicChatClientFactory.createChatClient(
+                    request.getApiKey(), request.getBaseUrl(), model);
+        } else {
+            client = "deepseek".equalsIgnoreCase(model) ? deepseekChatClient : chatClient;
+        }
 
         // 6. 调用 ChatClient 流式输出
         StringBuilder fullResponse = new StringBuilder();
@@ -74,7 +93,6 @@ public class ChatServiceImpl implements ChatService {
                 .content()
                 .doOnNext(fullResponse::append)
                 .doOnComplete(() -> {
-                    // 5. 流结束后保存 AI 回复
                     String response = fullResponse.toString();
                     saveMessage(conversationId, "ASSISTANT", response);
                     log.debug("对话完成: conversationId={}, response长度={}", conversationId, response.length());
@@ -83,6 +101,11 @@ public class ChatServiceImpl implements ChatService {
                     log.error("AI 调用异常: conversationId={}", conversationId, e);
                     saveAlert("AI_ERROR", "AI 调用失败: " + e.getMessage());
                 });
+    }
+
+    @Override
+    public Flux<String> chatStream(Long conversationId, String userMessage, String model) {
+        return chatStream(new ChatRequest(conversationId, userMessage, model));
     }
 
     @Override

@@ -13,7 +13,7 @@
     <!-- ========== 统计卡片行 ========== -->
     <div class="stats-cards">
       <el-card class="stat-card" shadow="hover">
-        <div class="stat-icon" style="background: #ecf5ff; color: #409eff;">
+        <div class="stat-icon" style="background: var(--stat-blue-bg); color: var(--stat-blue-text);">
           <el-icon size="28"><ChatDotSquare /></el-icon>
         </div>
         <div class="stat-info">
@@ -23,7 +23,7 @@
       </el-card>
 
       <el-card class="stat-card" shadow="hover">
-        <div class="stat-icon" style="background: #f0f9eb; color: #67c23a;">
+        <div class="stat-icon" style="background: var(--stat-green-bg); color: var(--stat-green-text);">
           <el-icon size="28"><CircleCheck /></el-icon>
         </div>
         <div class="stat-info">
@@ -33,7 +33,7 @@
       </el-card>
 
       <el-card class="stat-card" shadow="hover">
-        <div class="stat-icon" style="background: #fdf6ec; color: #e6a23c;">
+        <div class="stat-icon" style="background: var(--stat-orange-bg); color: var(--stat-orange-text);">
           <el-icon size="28"><Timer /></el-icon>
         </div>
         <div class="stat-info">
@@ -43,7 +43,7 @@
       </el-card>
 
       <el-card class="stat-card" shadow="hover">
-        <div class="stat-icon" style="background: #fef0f0; color: #f56c6c;">
+        <div class="stat-icon" style="background: var(--stat-red-bg); color: var(--stat-red-text);">
           <el-icon size="28"><Warning /></el-icon>
         </div>
         <div class="stat-info">
@@ -220,7 +220,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, inject, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
 import { marked } from 'marked'
@@ -228,6 +228,8 @@ import hljs from 'highlight.js'
 import { compareRagVsNonRag, getEvalStats } from '../api/eval'
 import { getAgentStats, getExecutionLogs } from '../api/agent'
 import { getRepairStats, getRepairTrend, getStatusDistribution, getUrgencyDistribution } from '../api/repair'
+
+const isDark = inject('isDark')
 
 // ==================== 状态 ====================
 const loading = ref(false)
@@ -301,7 +303,7 @@ async function loadToolChart() {
         radius: ['40%', '70%'],
         center: ['50%', '45%'],
         avoidLabelOverlap: true,
-        itemStyle: { borderRadius: 4, borderColor: '#fff', borderWidth: 2 },
+        itemStyle: { borderRadius: 4, borderColor: isDark?.value ? '#1f1f2e' : '#fff', borderWidth: 2 },
         label: { show: true, formatter: '{b}\n{d}%' },
         emphasis: { label: { fontSize: 16, fontWeight: 'bold' } },
         data: names.map((n, i) => ({ name: n, value: values[i] }))
@@ -497,16 +499,30 @@ async function refreshAll() {
 }
 
 // ==================== 图表生命周期 ====================
+function getChartTheme() {
+  return isDark?.value ? 'dark' : undefined
+}
+
 function initCharts() {
-  if (toolPieRef.value) toolPieChart = echarts.init(toolPieRef.value)
-  if (intentBarRef.value) intentBarChart = echarts.init(intentBarRef.value)
-  if (statusPieRef.value) statusPieChart = echarts.init(statusPieRef.value)
-  if (urgencyBarRef.value) urgencyBarChart = echarts.init(urgencyBarRef.value)
-  if (trendLineRef.value) trendLineChart = echarts.init(trendLineRef.value)
+  const theme = getChartTheme()
+  if (toolPieRef.value) toolPieChart = echarts.init(toolPieRef.value, theme)
+  if (intentBarRef.value) intentBarChart = echarts.init(intentBarRef.value, theme)
+  if (statusPieRef.value) statusPieChart = echarts.init(statusPieRef.value, theme)
+  if (urgencyBarRef.value) urgencyBarChart = echarts.init(urgencyBarRef.value, theme)
+  if (trendLineRef.value) trendLineChart = echarts.init(trendLineRef.value, theme)
   loadToolChart()
   loadIntentChart()
   loadRepairCharts()
 }
+
+function reloadCharts() {
+  disposeCharts()
+  nextTick(() => initCharts())
+}
+
+watch(isDark, () => {
+  reloadCharts()
+})
 
 function resizeCharts() {
   toolPieChart?.resize()
@@ -561,7 +577,7 @@ onUnmounted(() => {
   gap: 8px;
   margin: 0;
   font-size: 22px;
-  color: #303133;
+  color: var(--text-primary);
 }
 
 /* ---- 统计卡片 ---- */
@@ -592,35 +608,24 @@ onUnmounted(() => {
 .stat-value {
   font-size: 28px;
   font-weight: 700;
-  color: #303133;
+  color: var(--text-primary);
   line-height: 1.2;
 }
 
 .stat-label {
   font-size: 13px;
-  color: #909399;
+  color: var(--text-tertiary);
   margin-top: 4px;
 }
 
 /* ---- 图表 ---- */
-.charts-row {
-  margin-bottom: 20px;
-}
+.charts-row { margin-bottom: 20px; }
 
-.chart-box {
-  width: 100%;
-  height: 320px;
-}
-
-.chart-box-wide {
-  width: 100%;
-  height: 300px;
-}
+.chart-box { width: 100%; height: 320px; }
+.chart-box-wide { width: 100%; height: 300px; }
 
 /* ---- 对比区域 ---- */
-.compare-card {
-  margin-bottom: 20px;
-}
+.compare-card { margin-bottom: 20px; }
 
 .compare-header-inner {
   display: flex;
@@ -637,61 +642,50 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
-.compare-input {
-  width: 400px;
-}
+.compare-input { width: 400px; }
 
-.compare-metrics {
-  margin-bottom: 16px;
-}
+.compare-metrics { margin-bottom: 16px; }
 
 .metric-item {
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 8px;
-  background: #f5f7fa;
+  background: var(--bg-primary);
   border-radius: 8px;
 }
 
 .metric-label {
   font-size: 12px;
-  color: #909399;
+  color: var(--text-tertiary);
   margin-bottom: 4px;
 }
 
 .metric-value {
   font-size: 16px;
   font-weight: 600;
-  color: #303133;
+  color: var(--text-primary);
 }
 
-.answer-compare {
-  margin-bottom: 16px;
-}
+.answer-compare { margin-bottom: 16px; }
 
 .answer-panel {
-  border: 1px solid #ebeef5;
+  border: 1px solid var(--eval-panel-border);
   border-radius: 8px;
   overflow: hidden;
   height: 100%;
 }
 
-.answer-panel.rag-panel {
-  border-color: #b3e19d;
-}
-
-.answer-panel.nonrag-panel {
-  border-color: #d3d6db;
-}
+.answer-panel.rag-panel { border-color: var(--eval-rag-border); }
+.answer-panel.nonrag-panel { border-color: var(--eval-nonrag-border); }
 
 .answer-panel-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 10px 14px;
-  background: #fafafa;
-  border-bottom: 1px solid #ebeef5;
+  background: var(--eval-panel-header-bg);
+  border-bottom: 1px solid var(--eval-panel-border);
 }
 
 .answer-content {
@@ -700,10 +694,11 @@ onUnmounted(() => {
   overflow-y: auto;
   font-size: 14px;
   line-height: 1.7;
+  color: var(--text-primary);
 }
 
 .answer-content :deep(pre) {
-  background: #f5f7fa;
+  background: var(--bg-primary);
   padding: 12px;
   border-radius: 6px;
   overflow-x: auto;
@@ -721,50 +716,35 @@ onUnmounted(() => {
 
 .answer-content :deep(th),
 .answer-content :deep(td) {
-  border: 1px solid #e4e7ed;
+  border: 1px solid var(--border-color);
   padding: 6px 10px;
   text-align: left;
 }
 
-.answer-content :deep(th) {
-  background: #f5f7fa;
-}
+.answer-content :deep(th) { background: var(--table-header-bg); }
 
-.diff-analysis {
-  margin-bottom: 16px;
-}
+.diff-analysis { margin-bottom: 16px; }
 
 .diff-analysis h4,
 .retrieved-docs h4 {
   margin: 0 0 10px 0;
   font-size: 15px;
-  color: #303133;
+  color: var(--text-primary);
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.retrieved-docs {
-  margin-top: 16px;
-}
+.retrieved-docs { margin-top: 16px; }
 
 /* ---- 响应式 ---- */
 @media (max-width: 992px) {
-  .stats-cards {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .compare-input {
-    width: 100%;
-  }
+  .stats-cards { grid-template-columns: repeat(2, 1fr); }
+  .compare-input { width: 100%; }
 }
 
 @media (max-width: 576px) {
-  .stats-cards {
-    grid-template-columns: 1fr;
-  }
-  .compare-header-inner {
-    flex-direction: column;
-    align-items: stretch;
-  }
+  .stats-cards { grid-template-columns: 1fr; }
+  .compare-header-inner { flex-direction: column; align-items: stretch; }
 }
 </style>

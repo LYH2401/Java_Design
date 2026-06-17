@@ -43,10 +43,11 @@ public class AgentController {
     @PostMapping(value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> agentChat(@RequestBody ChatRequest request) {
         Long conversationId = getOrCreateConversationId(request);
+        request.setConversationId(conversationId);
         String model = request.getModel() != null ? request.getModel() : "dashscope";
         log.info("Agent 对话请求: conversationId={}, message={}, model={}", conversationId, request.getMessage(), model);
 
-        return agentService.agentChat(conversationId, request.getMessage(), model)
+        return agentService.agentChat(request)
                 .onErrorResume(e -> {
                     log.error("Agent 流式输出异常: {}", e.getMessage(), e);
                     return Flux.just("[错误] " + e.getMessage());
@@ -60,10 +61,11 @@ public class AgentController {
     @PostMapping(value = "/chat/with-rag", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> agentChatWithRag(@RequestBody ChatRequest request) {
         Long conversationId = getOrCreateConversationId(request);
+        request.setConversationId(conversationId);
         String model = request.getModel() != null ? request.getModel() : "dashscope";
         log.info("RAG+Agent 对话请求: conversationId={}, message={}, model={}", conversationId, request.getMessage(), model);
 
-        return agentServiceImpl.agentChatWithRag(conversationId, request.getMessage(), model)
+        return agentServiceImpl.agentChatWithRag(request)
                 .onErrorResume(e -> {
                     log.error("RAG+Agent 流式输出异常: {}", e.getMessage(), e);
                     return Flux.just("[错误] " + e.getMessage());

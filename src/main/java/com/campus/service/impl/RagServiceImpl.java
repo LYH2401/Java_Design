@@ -1,5 +1,7 @@
 package com.campus.service.impl;
 
+import com.campus.config.DynamicChatClientFactory;
+import com.campus.dto.ChatRequest;
 import com.campus.entity.Message;
 import com.campus.entity.RagEvaluation;
 import com.campus.repository.MessageMapper;
@@ -38,6 +40,7 @@ public class RagServiceImpl implements RagService {
     private static final int MAX_MESSAGE_CHARS = 4000;
 
     private final ChatClient chatClient;
+    private final DynamicChatClientFactory dynamicChatClientFactory;
     private final EmbeddingService embeddingService;
     private final DocumentService documentService;
     private final ConfidenceGate confidenceGate;
@@ -47,6 +50,7 @@ public class RagServiceImpl implements RagService {
     private final MessageMapper messageMapper;
 
     public RagServiceImpl(ChatClient chatClient,
+                          DynamicChatClientFactory dynamicChatClientFactory,
                           EmbeddingService embeddingService,
                           DocumentService documentService,
                           ConfidenceGate confidenceGate,
@@ -55,6 +59,7 @@ public class RagServiceImpl implements RagService {
                           ConversationService conversationService,
                           MessageMapper messageMapper) {
         this.chatClient = chatClient;
+        this.dynamicChatClientFactory = dynamicChatClientFactory;
         this.embeddingService = embeddingService;
         this.documentService = documentService;
         this.confidenceGate = confidenceGate;
@@ -62,6 +67,76 @@ public class RagServiceImpl implements RagService {
         this.vectorStore = vectorStore;
         this.conversationService = conversationService;
         this.messageMapper = messageMapper;
+    }
+
+    @Override
+    public Flux<String> answerWithContext(ChatRequest request) {
+        Long rawConversationId = request.getConversationId();
+        if (rawConversationId == null || rawConversationId <= 0) {
+            rawConversationId = conversationService.createConversation(1L, "RAG 对话").getId();
+        }
+        final Long conversationId = rawConversationId;
+        final String userMessage = request.getMessage();
+        final String model = request.getModel() != null ? request.getModel() : "dashscope";
+
+        saveMessage(conversationId, "USER", userMessage);
+        tryAutoTitle(conversationId, userMessage);
+
+        String historyContext = buildHistoryContext(conversationId);
+
+        ChatClient client;
+        if (request.hasCustomApiConfig()) {
+            client = dynamicChatClientFactory.createChatClient(
+                    request.getApiKey(), request.getBaseUrl(), model);
+        } else {
+            client = chatClient;
+        }
+
+        String truncated = truncateMessage(userMessage);
+        log.info("RAG 问答开始: query=\"{}\"", truncated.substring(0, Math.min(80, truncated.length())));
+
+        List<Document> retrievedDocs;
+        try {
+            retrievedDocs = embeddingService.similaritySearch(truncated, RAG_TOP_K);
+        } catch (Exception e) {
+            log.error("RAG 向量检索异常", e);
+            return Flux.just("抱歉，知识库检索服务暂时不可用，请稍后重试。");
+        }
+
+        double topSimilarity = retrievedDocs.isEmpty() ? 0.0
+                : confidenceGate.extractTopSimilarity(retrievedDocs);
+        boolean isConfident = confidenceGate.isConfident(retrievedDocs);
+
+        if (!isConfident) {
+            log.info("RAG 置信度不足: topSimilarity={}, threshold={} → 拒绝基于知识库回答",
+                    String.format("%.4f", topSimilarity), confidenceGate.getThreshold());
+            saveRagEvaluation(userMessage, retrievedDocs, topSimilarity, false, null);
+            return Flux.just("抱歉，我暂时没有找到与该问题相关的校园知识。建议您：\n"
+                    + "1. 尝试换一种表述方式提问\n"
+                    + "2. 联系学校相关部门获取准确信息\n"
+                    + "3. 访问学校官网查询最新资讯");
+        }
+
+        String enhancedPrompt = buildEnhancedPrompt(truncated, retrievedDocs, historyContext);
+        StringBuilder fullResponse = new StringBuilder();
+
+        return client.prompt()
+                .user(enhancedPrompt)
+                .stream()
+                .content()
+                .doOnNext(fullResponse::append)
+                .doOnComplete(() -> {
+                    String response = fullResponse.toString();
+                    saveMessage(conversationId, "ASSISTANT", response);
+                    saveRagEvaluation(userMessage, retrievedDocs, topSimilarity, true, response);
+                    log.info("RAG 问答完成: query长度={}, 检索文档数={}, 相似度={}, 回复长度={}",
+                            userMessage.length(), retrievedDocs.size(),
+                            String.format("%.4f", topSimilarity), response.length());
+                })
+                .doOnError(e -> {
+                    log.error("RAG ChatClient 调用异常", e);
+                    saveRagEvaluation(userMessage, retrievedDocs, topSimilarity, true, "[ERROR] " + e.getMessage());
+                });
     }
 
     @Override

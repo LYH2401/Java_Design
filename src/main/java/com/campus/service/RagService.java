@@ -1,5 +1,6 @@
 package com.campus.service;
 
+import com.campus.dto.ChatRequest;
 import org.springframework.ai.document.Document;
 import reactor.core.publisher.Flux;
 
@@ -12,8 +13,15 @@ import java.util.List;
 public interface RagService {
 
     /**
+     * 基于 RAG 的流式问答（带对话历史和自定义 API 配置）
+     *
+     * @param request 包含 conversationId, message, model, apiKey, baseUrl
+     * @return SSE 流式响应 Flux（纯文本逐token）
+     */
+    Flux<String> answerWithContext(ChatRequest request);
+
+    /**
      * 基于 RAG 的流式问答（带对话历史）
-     * 流程：similaritySearch(topK=3) → ConfidenceGate 门控 → 加载历史 → 增强 Prompt → ChatClient 流式输出
      *
      * @param conversationId 会话 ID
      * @param userMessage    用户问题

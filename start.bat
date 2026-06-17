@@ -36,41 +36,27 @@ echo   4. Maven is installed (if JAR needs rebuild)
 echo.
 
 :: ============================================================
-:: STEP 1 - Load environment from .env file
+:: STEP 1 - Load environment from .env file (optional)
 :: ============================================================
-echo [STEP 1] Loading .env...
+echo [STEP 1] Loading .env (optional)...
 
-if not exist .env (
-    if exist .env.example (
-        echo [INFO] .env not found, copying from .env.example...
-        copy /y .env.example .env >nul
-        echo [WARN] Please edit .env with your real API keys, then re-run.
-        echo        Required: AI_DASHSCOPE_API_KEY, DEEPSEEK_API, MYSQL_ROOT_PASSWORD
-        pause
-        exit /b 1
-    ) else (
-        echo [ERROR] .env and .env.example not found!
-        pause
-        exit /b 1
-    )
-)
-
-:: Parse .env file (key=value, skip comments and blank lines)
-set "MYSQL_PASS="
-set "DASHSCOPE_KEY="
-set "DEEPSEEK_KEY="
-
-for /f "usebackq tokens=1,* delims==" %%a in (".env") do (
-    set "key=%%a"
-    set "val=%%b"
-    if not "!key!"=="" (
-        if not "!key:~0,1!"=="#" (
-            for /f "tokens=1" %%v in ("!val!") do set "val_clean=%%v"
-            if "!key!"=="MYSQL_ROOT_PASSWORD" set "MYSQL_PASS=!val_clean!"
-            if "!key!"=="AI_DASHSCOPE_API_KEY" set "DASHSCOPE_KEY=!val_clean!"
-            if "!key!"=="DEEPSEEK_API" set "DEEPSEEK_KEY=!val_clean!"
+if exist .env (
+    :: Parse .env file (key=value, skip comments and blank lines)
+    for /f "usebackq tokens=1,* delims==" %%a in (".env") do (
+        set "key=%%a"
+        set "val=%%b"
+        if not "!key!"=="" (
+            if not "!key:~0,1!"=="#" (
+                for /f "tokens=1" %%v in ("!val!") do set "val_clean=%%v"
+                if "!key!"=="MYSQL_ROOT_PASSWORD" set "MYSQL_PASS=!val_clean!"
+                if "!key!"=="AI_DASHSCOPE_API_KEY" set "DASHSCOPE_KEY=!val_clean!"
+                if "!key!"=="DEEPSEEK_API" set "DEEPSEEK_KEY=!val_clean!"
+            )
         )
     )
+    echo [OK]   .env loaded
+) else (
+    echo [INFO] .env not found (API keys can be configured in the web UI)
 )
 
 if "%MYSQL_PASS%"=="" (

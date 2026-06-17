@@ -1,5 +1,7 @@
 package com.campus.service;
 
+import com.campus.dto.ChatRequest;
+
 import java.util.Map;
 import reactor.core.publisher.Flux;
 
@@ -11,10 +13,13 @@ public interface AgentService {
 
     /**
      * Agent 流式对话（SSE）
-     * @param conversationId 会话 ID
-     * @param userMessage    用户输入
-     * @param model          模型选择（dashscope / deepseek）
+     * @param request 包含 conversationId, message, model, apiKey, baseUrl
      * @return SSE 流
+     */
+    Flux<String> agentChat(ChatRequest request);
+
+    /**
+     * Agent 流式对话（SSE，兼容旧接口）
      */
     Flux<String> agentChat(Long conversationId, String userMessage, String model);
 

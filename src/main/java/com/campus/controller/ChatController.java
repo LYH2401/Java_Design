@@ -54,9 +54,10 @@ public class ChatController {
     @Operation(summary = "流式对话（SSE）", description = "发送消息并以 Server-Sent Events 流式返回 AI 回复，完成后发送 [DONE]")
     public Flux<ServerSentEvent<String>> chatStream(@RequestBody ChatRequest request) {
         Long conversationId = getOrCreateConversationId(request);
+        request.setConversationId(conversationId);
 
         String model = request.getModel() != null ? request.getModel() : "dashscope";
-        return chatService.chatStream(conversationId, request.getMessage(), model)
+        return chatService.chatStream(request)
                 .map(chunk -> ServerSentEvent.<String>builder()
                         .data(chunk)
                         .build())

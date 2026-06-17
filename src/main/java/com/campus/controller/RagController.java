@@ -47,9 +47,10 @@ public class RagController {
             description = "传入 conversationId 和 message，经向量检索→置信度门控→增强Prompt→ChatClient流式输出。返回 SSE 流。")
     public Flux<String> ragChat(@RequestBody ChatRequest request) {
         Long conversationId = getOrCreateConversationId(request);
+        request.setConversationId(conversationId);
         log.info("RAG 流式问答请求: conversationId={}, message=\"{}\"",
                 conversationId, request.getMessage().substring(0, Math.min(80, request.getMessage().length())));
-        return ragService.answerWithContext(conversationId, request.getMessage());
+        return ragService.answerWithContext(request);
     }
 
     /**

@@ -131,7 +131,7 @@
               <template #default="{ row }">
                 <el-tag v-if="row.urgencyLevel === 'URGENT'" type="danger" size="small">紧急</el-tag>
                 <el-tag v-else-if="row.urgencyLevel === 'HIGH'" type="warning" size="small">高</el-tag>
-                <span v-else style="color:#909399">-</span>
+                <span v-else style="color:var(--text-tertiary)">-</span>
               </template>
             </el-table-column>
             <el-table-column label="状态" width="100">
@@ -200,7 +200,7 @@
               <template #default="{ row }">
                 <el-tag v-if="row.urgencyLevel === 'URGENT'" type="danger" size="small">紧急</el-tag>
                 <el-tag v-else-if="row.urgencyLevel === 'HIGH'" type="warning" size="small">高</el-tag>
-                <span v-else style="color:#909399">-</span>
+                <span v-else style="color:var(--text-tertiary)">-</span>
               </template>
             </el-table-column>
             <el-table-column label="状态" width="100">
@@ -248,7 +248,7 @@
             <el-table-column label="评分" width="140">
               <template #default="{ row }">
                 <el-rate v-if="row.reviewRating" :model-value="row.reviewRating" disabled show-score text-color="#ff9900" size="small" />
-                <span v-else style="color:#909399">未评价</span>
+                <span v-else style="color:var(--text-tertiary)">未评价</span>
               </template>
             </el-table-column>
             <el-table-column label="操作" width="80" fixed="right">
@@ -283,7 +283,7 @@
 
         <!-- 时间线 -->
         <div class="timeline-wrap" v-if="detailData.createTime">
-          <h4 style="margin: 20px 0 12px; color: #303133;">处理进度</h4>
+          <h4 style="margin: 20px 0 12px; color: var(--text-primary);">处理进度</h4>
           <el-timeline>
             <el-timeline-item
               :timestamp="detailData.createTime"
@@ -338,7 +338,7 @@
 
         <!-- 图片展示 -->
         <div v-if="detailData.imageUrls" class="image-gallery">
-          <h4 style="margin: 20px 0 12px; color: #303133;">报修图片</h4>
+          <h4 style="margin: 20px 0 12px; color: var(--text-primary);">报修图片</h4>
           <div v-if="parseImages(detailData.imageUrls).length > 0" class="image-list">
             <el-image
               v-for="(url, i) in parseImages(detailData.imageUrls)"
@@ -350,7 +350,7 @@
               :initial-index="i"
             />
           </div>
-          <span v-else style="color:#909399">暂无图片</span>
+          <span v-else style="color:var(--text-tertiary)">暂无图片</span>
         </div>
       </template>
     </el-dialog>
@@ -369,7 +369,7 @@
               :value="m.id"
             >
               <span>{{ m.name }}</span>
-              <span style="float: right; color: #909399; font-size: 13px">{{ m.skillCategory }} | {{ m.status === 'AVAILABLE' ? '空闲' : '忙碌' }}</span>
+              <span style="float: right; color: var(--text-tertiary); font-size: 13px">{{ m.skillCategory }} | {{ m.status === 'AVAILABLE' ? '空闲' : '忙碌' }}</span>
             </el-option>
           </el-select>
         </el-form-item>
@@ -803,40 +803,35 @@ onMounted(() => {
   height: calc(100vh - 44px);
   display: flex;
   flex-direction: column;
-  background: #f5f7fa;
+  background: var(--bg-primary);
+  transition: background 0.3s;
 }
 
 .repair-header {
   padding: 12px 24px;
-  background: #fff;
-  border-bottom: 1px solid #e4e7ed;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  transition: background 0.3s;
 }
 
 .repair-header h2 {
   font-size: 18px;
-  color: #303133;
+  color: var(--text-primary);
   font-weight: 600;
 }
 
-.role-switch {
-  flex-shrink: 0;
-}
+.role-switch { flex-shrink: 0; }
 
-.repair-tabs {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
+.repair-tabs { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
 .repair-tabs :deep(.el-tabs__header) {
   margin: 0;
   padding: 0 24px;
-  background: #fff;
+  background: var(--bg-secondary);
 }
 
 .repair-tabs :deep(.el-tabs__content) {
@@ -845,49 +840,31 @@ onMounted(() => {
   padding: 0;
 }
 
-.tab-content {
-  padding: 24px;
-  max-width: 960px;
-  margin: 0 auto;
-}
+.tab-content { padding: 24px; max-width: 960px; margin: 0 auto; }
 
-.repair-form {
-  max-width: 600px;
-}
+.repair-form { max-width: 600px; }
 
-.filter-bar {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
-}
+.filter-bar { display: flex; gap: 12px; margin-bottom: 16px; }
 
 .upload-tip {
   font-size: 12px;
-  color: #909399;
+  color: var(--text-tertiary);
   margin-top: 6px;
 }
 
-.timeline-wrap {
-  margin-top: 4px;
-}
-
-.image-gallery {
-  margin-top: 4px;
-}
-
-.image-list {
-  display: flex;
-  flex-wrap: wrap;
-}
+.timeline-wrap { margin-top: 4px; }
+.image-gallery { margin-top: 4px; }
+.image-list { display: flex; flex-wrap: wrap; }
 
 /* ---- 统计卡片 ---- */
 .stats-row {
   display: flex;
   gap: 12px;
   padding: 12px 24px;
-  background: #fff;
-  border-bottom: 1px solid #e4e7ed;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
+  transition: background 0.3s;
 }
 
 .stat-item {
@@ -895,30 +872,30 @@ onMounted(() => {
   text-align: center;
   padding: 8px;
   border-radius: 8px;
-  background: #f5f7fa;
+  background: var(--bg-primary);
 }
 
-.stat-item.blue { background: #ecf5ff; }
-.stat-item.orange { background: #fdf6ec; }
-.stat-item.green { background: #f0f9eb; }
-.stat-item.yellow { background: #fef9e7; }
-.stat-item.gray { background: #f5f7fa; }
+.stat-item.blue { background: var(--stat-blue-bg); }
+.stat-item.orange { background: var(--stat-orange-bg); }
+.stat-item.green { background: var(--stat-green-bg); }
+.stat-item.yellow { background: var(--stat-yellow-bg); }
+.stat-item.gray { background: var(--bg-primary); }
 
 .stat-num {
   font-size: 20px;
   font-weight: 700;
-  color: #303133;
+  color: var(--text-primary);
 }
 
-.stat-item.blue .stat-num { color: #409eff; }
-.stat-item.orange .stat-num { color: #e6a23c; }
-.stat-item.green .stat-num { color: #67c23a; }
-.stat-item.yellow .stat-num { color: #e6a23c; }
-.stat-item.gray .stat-num { color: #909399; }
+.stat-item.blue .stat-num { color: var(--stat-blue-text); }
+.stat-item.orange .stat-num { color: var(--stat-orange-text); }
+.stat-item.green .stat-num { color: var(--stat-green-text); }
+.stat-item.yellow .stat-num { color: var(--stat-yellow-text); }
+.stat-item.gray .stat-num { color: var(--text-tertiary); }
 
 .stat-name {
   font-size: 12px;
-  color: #909399;
+  color: var(--text-tertiary);
   margin-top: 2px;
 }
 </style>

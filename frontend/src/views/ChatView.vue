@@ -1,6 +1,5 @@
 <template>
   <div class="chat-view">
-    <!-- 左侧会话列表 -->
     <aside class="sidebar" :class="{ collapsed: sidebarCollapsed }">
       <div class="sidebar-header">
         <h3>校园智能服务小助手</h3>
@@ -15,26 +14,24 @@
         </el-button>
       </div>
 
-      <!-- 模型选择 -->
-      <div class="model-switch">
-        <el-select v-model="selectedModel" size="small" style="width: 100%">
-          <el-option label="通义千问 (DashScope)" value="dashscope" />
-          <el-option label="DeepSeek" value="deepseek" />
-        </el-select>
+      <!-- API 配置区域 -->
+      <div class="api-section">
+        <template v-if="apiConfigured">
+          <div class="api-status">
+            <el-tag type="success" size="small" effect="plain">API 已配置</el-tag>
+            <span v-if="userModelName" class="api-model">{{ userModelName }}</span>
+          </div>
+        </template>
+        <template v-else>
+          <div class="api-setup-card" @click="openApiDialog?.()">
+            <span class="api-setup-icon">⚙️</span>
+            <span>配置 API Key 以开始对话</span>
+          </div>
+        </template>
       </div>
 
-      <!-- 隐私模式切换 -->
       <div class="mode-switch">
         <el-segmented v-model="chatMode" :options="modeOptions" size="small" block />
-      </div>
-      <div class="privacy-switch">
-        <el-switch
-          v-model="incognitoMode"
-          active-text="无痕"
-          inactive-text="普通"
-          size="small"
-          @change="onIncognitoChange"
-        />
       </div>
 
       <div class="conversation-list">
@@ -66,9 +63,7 @@
       </div>
     </aside>
 
-    <!-- 右侧聊天区域 -->
     <main class="chat-main">
-      <!-- 顶部工具栏 -->
       <header class="chat-header">
         <el-button text @click="sidebarCollapsed = !sidebarCollapsed" class="toggle-btn" :class="{ 'always-show': sidebarCollapsed }">
           <el-icon><Expand /></el-icon>
@@ -80,9 +75,17 @@
         <el-tag v-else-if="chatMode === 'rag'" type="info" size="small">RAG 模式</el-tag>
       </header>
 
-      <!-- 消息列表 -->
       <div class="message-area" ref="messageArea">
-        <div v-if="!currentConversationId" class="welcome">
+        <div v-if="!apiConfigured && !currentConversationId" class="welcome">
+          <div class="welcome-icon">🔑</div>
+          <h1>欢迎使用校园智能服务小助手</h1>
+          <p>请先在右上角或左侧配置您的 API Key，即可开始对话</p>
+          <el-button type="primary" size="small" round @click="openApiDialog?.()">
+            立即配置 API Key
+          </el-button>
+        </div>
+
+        <div v-else-if="!currentConversationId" class="welcome">
           <h1>校园智能服务小助手 🎓</h1>
           <p>你好！我可以帮你查询课表、找空教室、校园导航、办事流程等~</p>
           <div class="quick-actions">
@@ -143,7 +146,6 @@
           </div>
         </div>
 
-        <!-- 流式输出中的临时消息 -->
         <div v-if="streaming" class="message assistant-msg">
           <div class="msg-avatar">
             <el-avatar :size="32" :icon="Service" />
@@ -158,7 +160,6 @@
         </div>
       </div>
 
-      <!-- 底部输入区 -->
       <footer class="input-area">
         <div class="input-top">
           <div class="repair-chips">
@@ -171,16 +172,6 @@
               class="repair-chip"
               @click="sendMessage(c.prompt)"
             >{{ c.icon }} {{ c.label }}</el-tag>
-          </div>
-          <div class="quick-questions-row">
-            <el-button
-              v-for="q in quickQuestions"
-              :key="q"
-              size="small"
-              round
-              plain
-              @click="sendMessage(q)"
-            >{{ q }}</el-button>
           </div>
         </div>
         <div class="input-row">
@@ -208,11 +199,31 @@
 </template>
 
 <script setup>
-import { ref, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, nextTick, onMounted, onUnmounted, inject, computed } from 'vue'
 import { Plus, Delete, Fold, Expand, Promotion, Loading, UserFilled, Service } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { getConversations, createConversation, getMessages, deleteConversation } from '../api/chat'
 import { renderMarkdown } from '../utils/markdown'
+
+const apiForm = inject('apiConfig')
+const apiConfigured = inject('apiConfigured')
+const openApiDialog = inject('openApiDialog')
+
+function getApiConfig() {
+  if (!apiConfigured || !apiConfigured.value || !apiForm) return null
+  const saved = localStorage.getItem('campus_api_config')
+  if (!saved) return null
+  try {
+    const config = JSON.parse(saved)
+    if (config.apiKey && config.baseUrl) return config
+  } catch (_) {}
+  return null
+}
+
+const userModelName = computed(() => {
+  const config = getApiConfig()
+  return config?.model || ''
+})
 
 // ---- 状态 ----
 const conversations = ref([])
@@ -224,9 +235,8 @@ const streaming = ref(false)
 const streamContent = ref('')
 const toolCallingHint = ref('')
 const sidebarCollapsed = ref(false)
-const chatMode = ref('agent') // 'normal' | 'rag' | 'agent' | 'rag-agent'
-const incognitoMode = ref(false)
-const selectedModel = ref('dashscope') // 'dashscope' | 'deepseek'
+const chatMode = ref('agent')
+const selectedModel = ref('dashscope')
 
 const modeOptions = [
   { value: 'normal', label: '普通' },
@@ -291,8 +301,7 @@ async function loadConversations() {
 
 async function newConversation() {
   try {
-    const mode = incognitoMode.value ? 'INCOGNITO' : 'NORMAL'
-    const res = await createConversation(mode)
+    const res = await createConversation('NORMAL')
     const conv = res?.data
     if (!conv) {
       ElMessage.error('创建会话失败：返回数据为空')
@@ -312,10 +321,6 @@ async function switchConversation(conv) {
   }
   currentConversationId.value = conv.id
   currentConversationTitle.value = conv.title || '新对话'
-  // 同步 incognitoMode 状态
-  if (conv.conversationMode === 'INCOGNITO' || conv.threadId === 'INCOGNITO') {
-    incognitoMode.value = true
-  }
   try {
     const res = await getMessages(conv.id)
     messages.value = (res?.data || []).map(m => ({
@@ -327,13 +332,6 @@ async function switchConversation(conv) {
   }
   await nextTick()
   scrollToBottom()
-}
-
-function onIncognitoChange(val) {
-  // 切换无痕模式时，仅影响后续新建的会话
-  if (!currentConversationId.value) {
-    newConversation()
-  }
 }
 
 async function handleDeleteConversation(id) {
@@ -372,10 +370,20 @@ async function sendMessage(text) {
 
   const url = getStreamUrl()
   try {
+    const apiConfig = getApiConfig()
+    const body = {
+      conversationId: currentConversationId.value,
+      message: msg,
+      model: apiConfig ? (userModelName.value || '') : selectedModel.value
+    }
+    if (apiConfig) {
+      body.apiKey = apiConfig.apiKey
+      body.baseUrl = apiConfig.baseUrl
+    }
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ conversationId: currentConversationId.value, message: msg, model: selectedModel.value })
+      body: JSON.stringify(body)
     })
 
     if (!response.ok) {
@@ -524,15 +532,16 @@ function scrollToBottom() {
   display: flex;
   height: calc(100vh - 44px);
   width: 100vw;
-  background: #f5f7fa;
+  background: var(--bg-primary);
+  transition: background 0.3s;
 }
 
 /* ======== 左侧边栏 ======== */
 .sidebar {
   width: 280px;
   min-width: 280px;
-  background: #fff;
-  border-right: 1px solid #e4e7ed;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   transition: all 0.3s;
@@ -549,30 +558,67 @@ function scrollToBottom() {
   align-items: center;
   justify-content: space-between;
   padding: 16px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-light);
 }
 
 .sidebar-header h3 {
   font-size: 15px;
-  color: #303133;
+  color: var(--text-primary);
   white-space: nowrap;
 }
 
-.model-switch {
+/* API 配置区域 */
+.api-section {
   padding: 10px 16px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.api-setup-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: linear-gradient(135deg, var(--api-card-bg-start), var(--api-card-bg-end));
+  border: 1px dashed var(--api-card-border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.api-setup-card:hover {
+  background: linear-gradient(135deg, var(--api-card-hover-bg-start), var(--api-card-hover-bg-end));
+  border-color: var(--api-card-hover-border);
+}
+
+.api-setup-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.api-setup-card > span:last-child {
+  font-size: 13px;
+  color: var(--api-card-text);
+  font-weight: 500;
+}
+
+.api-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.api-model {
+  font-size: 12px;
+  color: #67c23a;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mode-switch {
   padding: 10px 16px;
-  border-bottom: 1px solid #eee;
-}
-
-.privacy-switch {
-  padding: 8px 16px;
-  border-bottom: 1px solid #eee;
-  display: flex;
-  align-items: center;
+  border-bottom: 1px solid var(--border-light);
 }
 
 .conversation-list {
@@ -591,15 +637,16 @@ function scrollToBottom() {
   transition: background 0.2s;
   margin-bottom: 4px;
   gap: 6px;
+  color: var(--text-primary);
 }
 
 .conv-item:hover {
-  background: #f0f2f5;
+  background: var(--bg-hover);
 }
 
 .conv-item.active {
-  background: #ecf5ff;
-  color: #409eff;
+  background: var(--bg-active);
+  color: var(--brand-color);
 }
 
 .conv-title {
@@ -626,7 +673,7 @@ function scrollToBottom() {
 
 .sidebar-footer {
   padding: 10px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--border-light);
   text-align: center;
 }
 
@@ -643,9 +690,11 @@ function scrollToBottom() {
   align-items: center;
   gap: 10px;
   padding: 12px 20px;
-  background: #fff;
-  border-bottom: 1px solid #e4e7ed;
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
+  color: var(--text-primary);
+  transition: background 0.3s, border-color 0.3s;
 }
 
 .current-title {
@@ -655,6 +704,7 @@ function scrollToBottom() {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--text-primary);
 }
 
 .toggle-btn {
@@ -678,20 +728,32 @@ function scrollToBottom() {
 
 .welcome h1 {
   font-size: 28px;
-  color: #303133;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.welcome-icon {
+  font-size: 48px;
   margin-bottom: 12px;
 }
 
 .welcome p {
-  color: #909399;
+  color: var(--welcome-text);
   margin-bottom: 24px;
 }
 
 .quick-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 18px;
   justify-content: center;
+}
+
+.quick-actions .el-button,
+.quick-questions-row .el-button {
+  padding: 10px 18px !important;
+  font-size: 14px;
+  height: auto;
 }
 
 /* ======== 消息气泡 ======== */
@@ -724,23 +786,23 @@ function scrollToBottom() {
 }
 
 .user-msg .msg-text {
-  background: #409eff;
-  color: #fff;
+  background: var(--user-msg-bg);
+  color: var(--user-msg-text);
   border-bottom-right-radius: 4px;
 }
 
 .assistant-msg .msg-text {
-  background: #fff;
-  color: #303133;
+  background: var(--assistant-msg-bg);
+  color: var(--assistant-msg-text);
   border-bottom-left-radius: 4px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  box-shadow: var(--shadow-light);
 }
 
 /* Markdown 样式深作用域 */
 .msg-text :deep(p) { margin: 0 0 8px; }
 .msg-text :deep(p:last-child) { margin-bottom: 0; }
 .msg-text :deep(code) {
-  background: rgba(0,0,0,0.06);
+  background: var(--code-bg);
   padding: 2px 6px;
   border-radius: 3px;
   font-size: 13px;
@@ -761,9 +823,9 @@ function scrollToBottom() {
 .msg-text :deep(ul), .msg-text :deep(ol) { padding-left: 20px; margin: 8px 0; }
 .msg-text :deep(li) { margin-bottom: 4px; }
 .msg-text :deep(blockquote) {
-  border-left: 3px solid #409eff;
+  border-left: 3px solid var(--blockquote-border);
   padding-left: 12px;
-  color: #606266;
+  color: var(--blockquote-color);
   margin: 8px 0;
 }
 .msg-text :deep(table) {
@@ -772,14 +834,14 @@ function scrollToBottom() {
   margin: 8px 0;
 }
 .msg-text :deep(th), .msg-text :deep(td) {
-  border: 1px solid #ddd;
+  border: 1px solid var(--table-border);
   padding: 6px 10px;
   text-align: left;
 }
-.msg-text :deep(th) { background: #f5f7fa; }
+.msg-text :deep(th) { background: var(--table-header-bg); }
 
 .streaming-text::after {
-  content: '▌';
+  content: '\258C';
   animation: blink 1s infinite;
 }
 
@@ -794,8 +856,8 @@ function scrollToBottom() {
   gap: 6px;
   margin-top: 6px;
   padding: 6px 12px;
-  background: #fdf6ec;
-  color: #e6a23c;
+  background: var(--tool-hint-bg);
+  color: var(--tool-hint-color);
   border-radius: 8px;
   font-size: 13px;
 }
@@ -810,7 +872,7 @@ function scrollToBottom() {
 
 .source-label {
   font-size: 12px;
-  color: #909399;
+  color: var(--source-label-color);
 }
 
 /* ======== 底部输入 ======== */
@@ -818,28 +880,29 @@ function scrollToBottom() {
   display: flex;
   flex-direction: column;
   padding: 10px 20px 14px;
-  background: #fff;
-  border-top: 1px solid #e4e7ed;
+  background: var(--input-bg);
+  border-top: 1px solid var(--border-color);
   flex-shrink: 0;
   gap: 8px;
+  transition: background 0.3s, border-color 0.3s;
 }
 
 .input-top {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .repair-chips {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
 .chips-label {
   font-size: 12px;
-  color: #909399;
+  color: var(--text-tertiary);
 }
 
 .repair-chip {
@@ -853,7 +916,7 @@ function scrollToBottom() {
 
 .quick-questions-row {
   display: flex;
-  gap: 6px;
+  gap: 18px;
   flex-wrap: wrap;
 }
 
@@ -876,27 +939,27 @@ function scrollToBottom() {
 /* ======== 报修确认卡片 ======== */
 .repair-confirm-card {
   margin-top: 10px;
-  border: 1px solid #e6a23c;
+  border: 1px solid var(--repair-card-border);
   border-radius: 10px;
   padding: 14px;
-  background: #fef9e7;
+  background: var(--repair-card-bg);
 }
 
 .repair-confirm-header {
   font-weight: 600;
   font-size: 14px;
-  color: #e6a23c;
+  color: var(--tool-hint-color);
   margin-bottom: 10px;
 }
 
 .repair-confirm-item {
   font-size: 13px;
-  color: #303133;
+  color: var(--text-primary);
   margin-bottom: 6px;
 }
 
 .repair-confirm-label {
-  color: #909399;
+  color: var(--text-tertiary);
 }
 
 .repair-confirm-actions {
