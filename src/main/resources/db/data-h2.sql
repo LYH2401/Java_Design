@@ -1,0 +1,187 @@
+-- ============================================
+-- 校园智能服务小助手 - H2 初始数据
+-- ============================================
+
+-- 1. 管理员用户（admin / admin123）BCrypt 加密
+INSERT INTO sys_user (id, username, password, role)
+SELECT 1, 'admin', '$2a$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPQga4X8y', 'ADMIN'
+WHERE NOT EXISTS (SELECT 1 FROM sys_user WHERE id = 1);
+
+-- 2. 校园知识文档
+INSERT INTO knowledge_doc (id, title, category, content)
+SELECT 1, '图书馆开放时间', '图书馆',
+ '学校图书馆开放时间：周一至周五 8:00-22:00，周六周日 9:00-21:00。法定节假日开放时间另行通知。'
+ || '图书馆共有五层，一层为自习区，二层为社科图书区，三层为自然科学图书区，四层为电子阅览室，五层为学术报告厅。'
+ || '借阅规则：本科生每次最多借阅 5 本，期限 30 天；研究生每次最多借阅 10 本，期限 60 天。可通过校园一卡通自助借还。'
+WHERE NOT EXISTS (SELECT 1 FROM knowledge_doc WHERE id = 1);
+
+INSERT INTO knowledge_doc (id, title, category, content)
+SELECT 2, '校园卡充值指南', '生活服务',
+ '校园一卡通充值方式：' || CHAR(10)
+ || '1. 微信充值：关注"智慧校园"公众号 → 校园服务 → 一卡通充值' || CHAR(10)
+ || '2. 支付宝充值：搜索"校园一卡通"小程序 → 选择学校 → 输入金额' || CHAR(10)
+ || '3. 现金充值：食堂一楼自助充值机（支持 50/100 元纸币）' || CHAR(10)
+ || '4. 人工充值：行政楼一楼财务处窗口（工作日 9:00-16:30）' || CHAR(10)
+ || '挂失与补办：如遗失校园卡，请立即通过公众号挂失，补办需携带身份证到行政楼一楼，工本费 20 元。'
+WHERE NOT EXISTS (SELECT 1 FROM knowledge_doc WHERE id = 2);
+
+INSERT INTO knowledge_doc (id, title, category, content)
+SELECT 3, '校园建筑与导航', '校园导航',
+ '校园主要建筑分布：' || CHAR(10)
+ || '● 教学楼 A 区：位于校园东侧，主要为文科类课程教室' || CHAR(10)
+ || '● 教学楼 B 区：位于校园西侧，主要为理工科课程教室' || CHAR(10)
+ || '● 实验楼：位于校园北侧，化学、物理、计算机等实验课程' || CHAR(10)
+ || '● 图书馆：校园中心位置，标志性建筑' || CHAR(10)
+ || '● 行政楼：校园南门入口处' || CHAR(10)
+ || '● 学生食堂：共有三个食堂，分别位于东区（第一食堂）、西区（第二食堂）、北区（第三食堂）' || CHAR(10)
+ || '● 体育馆：校园西北角，含篮球场、羽毛球场、游泳池' || CHAR(10)
+ || '● 校医院：行政楼东侧，24 小时急诊电话：027-12345678'
+WHERE NOT EXISTS (SELECT 1 FROM knowledge_doc WHERE id = 3);
+
+-- 3. 课表数据
+INSERT INTO course_schedule (id, student_id, course_name, teacher, classroom, day_of_week, time_slot, week_range)
+SELECT 1, '2024001', '高等数学A(上)', '张明远', '教学楼B-301', 1, '1-2', '1-18'
+WHERE NOT EXISTS (SELECT 1 FROM course_schedule WHERE id = 1);
+
+INSERT INTO course_schedule (id, student_id, course_name, teacher, classroom, day_of_week, time_slot, week_range)
+SELECT 2, '2024001', '大学英语(三)', '李清华', '教学楼A-205', 1, '3-4', '1-18'
+WHERE NOT EXISTS (SELECT 1 FROM course_schedule WHERE id = 2);
+
+INSERT INTO course_schedule (id, student_id, course_name, teacher, classroom, day_of_week, time_slot, week_range)
+SELECT 3, '2024001', '大学物理B', '王力学', '教学楼B-402', 2, '1-2', '1-18'
+WHERE NOT EXISTS (SELECT 1 FROM course_schedule WHERE id = 3);
+
+INSERT INTO course_schedule (id, student_id, course_name, teacher, classroom, day_of_week, time_slot, week_range)
+SELECT 4, '2024001', '线性代数', '赵数论', '教学楼B-210', 2, '5-6', '1-18'
+WHERE NOT EXISTS (SELECT 1 FROM course_schedule WHERE id = 4);
+
+INSERT INTO course_schedule (id, student_id, course_name, teacher, classroom, day_of_week, time_slot, week_range)
+SELECT 5, '2024001', '程序设计基础', '陈代码', '实验楼C-101', 3, '1-2', '1-18'
+WHERE NOT EXISTS (SELECT 1 FROM course_schedule WHERE id = 5);
+
+INSERT INTO course_schedule (id, student_id, course_name, teacher, classroom, day_of_week, time_slot, week_range)
+SELECT 6, '2024001', '体育(三)', '刘运动', '体育馆', 3, '3-4', '1-18'
+WHERE NOT EXISTS (SELECT 1 FROM course_schedule WHERE id = 6);
+
+INSERT INTO course_schedule (id, student_id, course_name, teacher, classroom, day_of_week, time_slot, week_range)
+SELECT 7, '2024001', '高等数学A(上)', '张明远', '教学楼B-301', 4, '1-2', '1-18'
+WHERE NOT EXISTS (SELECT 1 FROM course_schedule WHERE id = 7);
+
+INSERT INTO course_schedule (id, student_id, course_name, teacher, classroom, day_of_week, time_slot, week_range)
+SELECT 8, '2024001', '大学英语(三)', '李清华', '教学楼A-205', 4, '5-6', '1-18'
+WHERE NOT EXISTS (SELECT 1 FROM course_schedule WHERE id = 8);
+
+INSERT INTO course_schedule (id, student_id, course_name, teacher, classroom, day_of_week, time_slot, week_range)
+SELECT 9, '2024001', '大学物理实验', '周实验', '实验楼B-305', 5, '1-4', '2-17'
+WHERE NOT EXISTS (SELECT 1 FROM course_schedule WHERE id = 9);
+
+INSERT INTO course_schedule (id, student_id, course_name, teacher, classroom, day_of_week, time_slot, week_range)
+SELECT 10, '2024001', '形势与政策', '马思修', '教学楼A-101', 5, '7-8', '5-12'
+WHERE NOT EXISTS (SELECT 1 FROM course_schedule WHERE id = 10);
+
+INSERT INTO course_schedule (id, student_id, course_name, teacher, classroom, day_of_week, time_slot, week_range)
+SELECT 11, '2024002', '高等数学A(上)', '张明远', '教学楼B-302', 1, '3-4', '1-18'
+WHERE NOT EXISTS (SELECT 1 FROM course_schedule WHERE id = 11);
+
+INSERT INTO course_schedule (id, student_id, course_name, teacher, classroom, day_of_week, time_slot, week_range)
+SELECT 12, '2024002', '大学英语(一)', '刘外语', '教学楼A-208', 2, '1-2', '1-18'
+WHERE NOT EXISTS (SELECT 1 FROM course_schedule WHERE id = 12);
+
+-- 4. 校园地点数据
+INSERT INTO campus_location (id, name, category, description, coordinate_x, coordinate_y)
+SELECT 1, '图书馆', '图书馆', '校园中心标志性建筑，共五层，含自习区/社科图书/自然科学/电子阅览室/学术报告厅', 0, 0
+WHERE NOT EXISTS (SELECT 1 FROM campus_location WHERE id = 1);
+
+INSERT INTO campus_location (id, name, category, description, coordinate_x, coordinate_y)
+SELECT 2, '教学楼A区', '教学楼', '位于校园东侧，主要为文科类课程教室，共6层', 120, 30
+WHERE NOT EXISTS (SELECT 1 FROM campus_location WHERE id = 2);
+
+INSERT INTO campus_location (id, name, category, description, coordinate_x, coordinate_y)
+SELECT 3, '教学楼B区', '教学楼', '位于校园西侧，主要为理工科课程教室，共8层，含阶梯教室', -80, 50
+WHERE NOT EXISTS (SELECT 1 FROM campus_location WHERE id = 3);
+
+INSERT INTO campus_location (id, name, category, description, coordinate_x, coordinate_y)
+SELECT 4, '实验楼', '实验室', '位于校园北侧，化学/物理/计算机实验课程教室', 20, 180
+WHERE NOT EXISTS (SELECT 1 FROM campus_location WHERE id = 4);
+
+INSERT INTO campus_location (id, name, category, description, coordinate_x, coordinate_y)
+SELECT 5, '行政楼', '行政', '校园南门入口处，校领导办公室/财务处/教务处所在地', 0, -150
+WHERE NOT EXISTS (SELECT 1 FROM campus_location WHERE id = 5);
+
+INSERT INTO campus_location (id, name, category, description, coordinate_x, coordinate_y)
+SELECT 6, '第一食堂', '食堂', '位于东区，共三层，一层为大众餐厅，二层为风味小吃，三层为教工餐厅', 100, 80
+WHERE NOT EXISTS (SELECT 1 FROM campus_location WHERE id = 6);
+
+INSERT INTO campus_location (id, name, category, description, coordinate_x, coordinate_y)
+SELECT 7, '第二食堂', '食堂', '位于西区，共两层，以地方特色美食为主', -120, 70
+WHERE NOT EXISTS (SELECT 1 FROM campus_location WHERE id = 7);
+
+INSERT INTO campus_location (id, name, category, description, coordinate_x, coordinate_y)
+SELECT 8, '第三食堂', '食堂', '位于北区，靠近研究生宿舍，简约风格', 30, 140
+WHERE NOT EXISTS (SELECT 1 FROM campus_location WHERE id = 8);
+
+INSERT INTO campus_location (id, name, category, description, coordinate_x, coordinate_y)
+SELECT 9, '体育馆', '体育', '校园西北角，含篮球场/羽毛球场/游泳池/健身房', -100, 160
+WHERE NOT EXISTS (SELECT 1 FROM campus_location WHERE id = 9);
+
+INSERT INTO campus_location (id, name, category, description, coordinate_x, coordinate_y)
+SELECT 10, '校医院', '医疗', '行政楼东侧，24小时急诊电话：027-12345678，门诊时间8:00-17:30', 60, -100
+WHERE NOT EXISTS (SELECT 1 FROM campus_location WHERE id = 10);
+
+INSERT INTO campus_location (id, name, category, description, coordinate_x, coordinate_y)
+SELECT 11, '学生宿舍1号楼', '宿舍', '东区本科生宿舍，4人间，独立卫浴', 150, 100
+WHERE NOT EXISTS (SELECT 1 FROM campus_location WHERE id = 11);
+
+INSERT INTO campus_location (id, name, category, description, coordinate_x, coordinate_y)
+SELECT 12, '学生宿舍3号楼', '宿舍', '西区研究生宿舍，2人间', -150, 90
+WHERE NOT EXISTS (SELECT 1 FROM campus_location WHERE id = 12);
+
+INSERT INTO campus_location (id, name, category, description, coordinate_x, coordinate_y)
+SELECT 13, '学术报告厅', '学术', '图书馆五楼，可容纳500人，举办大型讲座和学术会议', 0, 5
+WHERE NOT EXISTS (SELECT 1 FROM campus_location WHERE id = 13);
+
+INSERT INTO campus_location (id, name, category, description, coordinate_x, coordinate_y)
+SELECT 14, '快递驿站', '生活', '位于第一食堂南侧，支持中通/圆通/韵达/顺丰等快递收发', 80, 50
+WHERE NOT EXISTS (SELECT 1 FROM campus_location WHERE id = 14);
+
+INSERT INTO campus_location (id, name, category, description, coordinate_x, coordinate_y)
+SELECT 15, '校园超市', '生活', '位于第一食堂一楼，经营日用百货/文具/零食/饮品', 90, 60
+WHERE NOT EXISTS (SELECT 1 FROM campus_location WHERE id = 15);
+
+-- 5. 维修员数据
+INSERT INTO maintainer (id, name, phone, skill_category, status)
+SELECT 1, '张师傅', '13800138001', '水电', 'AVAILABLE'
+WHERE NOT EXISTS (SELECT 1 FROM maintainer WHERE id = 1);
+
+INSERT INTO maintainer (id, name, phone, skill_category, status)
+SELECT 2, '李师傅', '13800138002', '网络', 'AVAILABLE'
+WHERE NOT EXISTS (SELECT 1 FROM maintainer WHERE id = 2);
+
+INSERT INTO maintainer (id, name, phone, skill_category, status)
+SELECT 3, '王师傅', '13800138003', '木工', 'BUSY'
+WHERE NOT EXISTS (SELECT 1 FROM maintainer WHERE id = 3);
+
+-- 6. 报修单示例数据
+INSERT INTO repair_order (id, order_no, user_id, title, description, location, urgency_level, status, created_by, assigned_to, assigned_time, completed_time)
+SELECT 1, 'REP2026061510455284', 1, '图书馆三楼空调不制冷',
+ '图书馆三楼自习区中央空调出风口无冷风，室温超过32度，影响学生自习。',
+ '图书馆三楼自习区', 'HIGH', 'COMPLETED',
+ 'admin', 1, '2026-06-10 09:30:00', '2026-06-10 14:00:00'
+WHERE NOT EXISTS (SELECT 1 FROM repair_order WHERE id = 1);
+
+INSERT INTO repair_order (id, order_no, user_id, title, description, location, urgency_level, status, created_by, assigned_to, assigned_time, completed_time)
+SELECT 2, 'REP2026061510451937', 1, '宿舍1号楼502室水龙头漏水',
+ '宿舍1号楼502室卫生间洗手台水龙头持续漏水，地面积水严重，存在安全隐患。',
+ '学生宿舍1号楼502室', 'URGENT', 'PENDING',
+ 'admin', NULL, NULL, NULL
+WHERE NOT EXISTS (SELECT 1 FROM repair_order WHERE id = 2);
+
+-- 7. 报修评价数据
+INSERT INTO repair_review (id, order_id, user_id, rating, comment)
+SELECT 1, 1, 1, 5, '张师傅响应迅速，维修技术专业，半小时就修好了空调，制冷效果很好！'
+WHERE NOT EXISTS (SELECT 1 FROM repair_review WHERE id = 1);
+
+-- 8. 派单记录数据
+INSERT INTO dispatch_log (id, order_id, maintainer_id, dispatch_time, accept_time, complete_time, status)
+SELECT 1, 1, 1, '2026-06-10 09:30:00', '2026-06-10 09:45:00', '2026-06-10 14:00:00', 'COMPLETED'
+WHERE NOT EXISTS (SELECT 1 FROM dispatch_log WHERE id = 1);

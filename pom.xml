@@ -74,6 +74,13 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- H2 嵌入式数据库（standalone 安装包使用） -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
         <!-- 5. Druid 连接池 -->
         <dependency>
             <groupId>com.alibaba</groupId>
