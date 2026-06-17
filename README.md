@@ -1,5 +1,5 @@
 # 校园智能服务小助手
-基于 Spring AI Alibaba 的智能校园服务对话系统
+本项目是基于 Spring AI Alibaba 的智能校园服务对话系统
 
 ## 功能特性
 - AI 对话：阿里百炼大模型，流式输出
@@ -19,6 +19,7 @@ Java 17+ | SpringBoot 3.3.x | Spring AI Alibaba | MySQL 8.0 | Docker | Vue 3 | P
 
 ## 开发指南
 暂无
+
 
 ## 开源协议
 MIT License
